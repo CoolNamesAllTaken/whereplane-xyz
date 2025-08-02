@@ -17,12 +17,12 @@ services:
       - TAR1090_ENABLE_AC_DB=True
       - TAR1090_HISTORY_DISABLE=true
       - READSB_EXTRA_ARGS=
-          --tar1090-use-api --write-json-globe-index
-          --json-reliable=2 --ac-hash-bits 18
-          --net-receiver-id
+        --tar1090-use-api --write-json-globe-index
+        --json-reliable=2 --ac-hash-bits 18
+        --net-receiver-id
       - READSB_ENABLE_TRACES=true
       #- TAR1090_USEROUTEAPI=True
-      #- MAX_GLOBE_HISTORY=365
+      - MAX_GLOBE_HISTORY=365
     ports:
       - 80:80 # change 80 to whatever port you want the webserver to listen on
       - 30004:30004 # change 30004 to whatever port you want to ingest data on
