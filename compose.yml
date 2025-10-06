@@ -1,7 +1,8 @@
 # Thanks to @wiedehopf for this configuration file!
 services:
   globe:
-    image: ghcr.io/sdr-enthusiasts/docker-adsb-ultrafeeder:latest
+    # image: ghcr.io/sdr-enthusiasts/docker-adsb-ultrafeeder:latest
+    build: https://github.com/wiedehopf/ultrafeeder_uuid.git#master
     restart: unless-stopped
     healthcheck:
       disable: true
