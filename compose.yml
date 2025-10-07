@@ -20,7 +20,7 @@ services:
       - READSB_EXTRA_ARGS=
         --tar1090-use-api --write-json-globe-index
         --json-reliable=2 --ac-hash-bits 18
-        --net-receiver-id
+        --net-receiver-id --net-ingest
       - READSB_ENABLE_TRACES=true
       #- TAR1090_USEROUTEAPI=True
       - MAX_GLOBE_HISTORY=365
