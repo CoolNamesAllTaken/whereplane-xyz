@@ -27,6 +27,7 @@ services:
       # Aggregator connections:
       - ULTRAFEEDER_CONFIG=
           adsb,feed.luftlage.net,30101,beast_reduce_plus_out;
+          adsb,feed.adsbiq.com,30004,beast_reduce_plus_out;
     ports:
       - 80:80 # change 80 to whatever port you want the webserver to listen on
       - 30004:30004 # change 30004 to whatever port you want to ingest data on
