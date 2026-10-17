@@ -1,0 +1,11 @@
+#!/bin/bash
+# pfb-tiles: include the /pfb-tiles/ proxy in tar1090's nginx site. Runs after
+# 07-nginx-configure. Never fails: a missing piece only means no tiles, never no globe.
+conf=/opt/pfb-tiles/globe-proxy.conf
+site=/etc/nginx/sites-enabled/tar1090
+if [ -f "$conf" ] && [ -f "$site" ]; then
+    cp -f "$conf" /etc/nginx/pfb-tiles.conf
+    grep -q 'include /etc/nginx/pfb-tiles.conf;' "$site" || \
+        sed -i 's#^\(\s*\)include /etc/nginx/nginx-tar1090-webroot.conf;#&\n\1include /etc/nginx/pfb-tiles.conf;#' "$site"
+fi
+exit 0
