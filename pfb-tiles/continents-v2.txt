@@ -1,0 +1,10 @@
+# Geofabrik continent extracts that together cover the planet: <id> <url> <size MB, for the disk check>
+europe https://download.geofabrik.de/europe-latest.osm.pbf 35239
+north-america https://download.geofabrik.de/north-america-latest.osm.pbf 19505
+asia https://download.geofabrik.de/asia-latest.osm.pbf 16386
+africa https://download.geofabrik.de/africa-latest.osm.pbf 7937
+russia https://download.geofabrik.de/russia-latest.osm.pbf 4181
+south-america https://download.geofabrik.de/south-america-latest.osm.pbf 4142
+australia-oceania https://download.geofabrik.de/australia-oceania-latest.osm.pbf 1573
+central-america https://download.geofabrik.de/central-america-latest.osm.pbf 791
+antarctica https://download.geofabrik.de/antarctica-latest.osm.pbf 33

@@ -2,12 +2,17 @@
 
 Static vector basemap tiles for the faint map behind the live air traffic on pantsforbirds.com.
 
-    https://globe.whereplane.xyz/pfb-tiles/v1/{z}/{x}/{y}.pbf      tiles (gzip-compressed MVT)
-    https://globe.whereplane.xyz/pfb-tiles/v1/tiles.json           TileJSON, attribution
+    https://globe.whereplane.xyz/pfb-tiles/v2/{z}/{x}/{y}.pbf      tiles (gzip-compressed MVT)
+    https://globe.whereplane.xyz/pfb-tiles/v2/tiles.json           TileJSON, attribution
+
+v1 (z4–z10, contiguous US) stays published, unchanged. v2 is the whole world at z0–z9, plus z10 where
+whereplane's stations are (`z10-v2.poly`: the contiguous US, central Europe, the Balkans, Britain and
+Ireland, Anchorage, Hawaii).
 
 - OpenMapTiles schema, trimmed: `water` (class), `waterway` (class river/canal), `transportation`
   (class motorway/trunk/primary, no ramps), `boundary` (admin_level <= 4, maritime). No labels, no POIs.
-- z4–z10, contiguous US plus a margin. A tile with nothing in it, or outside the coverage, is 204.
+- v1: z4–z10, contiguous US plus a margin. v2: z0–z9 worldwide, z10 inside `z10-v2.poly`. A tile with
+  nothing in it, or outside the coverage, is 204.
 - Attribution: **© OpenStreetMap contributors, OpenMapTiles**.
 
 ## How it is served
@@ -24,7 +29,12 @@ Static vector basemap tiles for the faint map behind the live air traffic on pan
 
 `build.sh v2` (on a build machine, not here) downloads the Geofabrik US extract, runs planetiler's
 OpenMapTiles profile (z4–z10, the US bounds) and `trim.py`, which keeps the layers, classes and
-fields above at the protobuf level and writes gzip `z/x/y.pbf` plus `tiles.json`. Publish a new
+fields above at the protobuf level and writes gzip `z/x/y.pbf` plus `tiles.json`. `build-v2.sh` builds v2 from
+the whole planet without ever holding it: it downloads the Geofabrik continents in `continents-v2.txt`
+two at a time (waiting while that would leave less than 60 GB free), cuts each with `osmium tags-filter`
+to the objects these layers use and deletes it, merges the results, and runs planetiler twice (world
+z0–z9; z10 on an `osmium extract` of `z10-v2.poly`). To give another place z10, add its box to
+`z10-v2.poly` and publish the result as v3. Publish a new
 build under a new version next to the old one, then switch the site's URL to it. Never change files
 under a published version, since they are cached for a year.
 
