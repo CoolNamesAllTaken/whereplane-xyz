@@ -39,3 +39,20 @@ services:
       - /opt/ultrafeeder/globe_history:/var/globe_history
       - /opt/ultrafeeder/graphs1090:/var/lib/collectd
       - /proc/diskstats:/proc/diskstats:ro
+      # pfb-tiles: proxy /pfb-tiles/ to the service below (07-pfb-tiles adds it to tar1090's nginx site)
+      - ./pfb-tiles:/opt/pfb-tiles:ro
+      - ./pfb-tiles/07-pfb-tiles:/etc/s6-overlay/startup.d/07-pfb-tiles:ro
+
+  # Static vector basemap tiles (OpenMapTiles schema, trimmed) for the map behind pantsforbirds.com's
+  # live traffic: https://globe.whereplane.xyz/pfb-tiles/v1/{z}/{x}/{y}.pbf. See pfb-tiles/README.md.
+  pfb-tiles:
+    image: nginx:1.27.5-alpine
+    container_name: pfb-tiles
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    volumes:
+      - ./pfb-tiles/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${PFB_TILES_DIR:-/home/bird/pfb-tiles-t0530/tiles}:/srv/tiles:ro
