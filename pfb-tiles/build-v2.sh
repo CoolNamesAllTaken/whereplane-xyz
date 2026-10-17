@@ -3,7 +3,7 @@
 # US, central Europe, the Balkans, Britain and Ireland, Anchorage, Hawaii). Same layers and trimming as v1.
 # Run on a build machine, not on whereplane. Needs Java 21, planetiler.jar, osmium-tool and python3.
 # The Geofabrik continents (continents-v2.txt, about 90 GB) are downloaded two at a time, each cut with
-# osmium tags-filter to what the layers use (about 5% is left), and deleted; a download waits until it fits
+# osmium tags-filter to what the layers use (about 10% is left: 9.5 GB), and deleted; a download waits until it fits
 # with KEEP_FREE_MB (default 60000) still free. Peak disk ~60 GB (Europe and North America at once), then
 # planetiler temp ~25 GB. On 7 CPUs: ~3-4 h of downloads (filtering overlaps), planetiler 46 min (world) + 8 min (z10).
 # usage: build-v2.sh [workdir]
