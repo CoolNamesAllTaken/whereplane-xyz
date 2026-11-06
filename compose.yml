@@ -1,9 +1,9 @@
 # Thanks to @wiedehopf for this configuration file!
 services:
   globe:
-    # Ultrafeeder with readsb built WITH_UUIDS (see Dockerfile). Rebuild to pick up
-    # upstream updates: docker compose build --pull && docker compose up -d
-    build: .
+    # ultrafeeder with readsbee (readsb fork with a feeder UUID filter), built WITH_UUIDS.
+    # https://github.com/PantsForBirds/readsbee. Rollback: see README.md.
+    image: ghcr.io/pantsforbirds/readsbee:sha-2cd8e7c@sha256:116b024f749cc72973a762d96d1a1685ef600ddfe95b38918972859c6f979ad2
     restart: unless-stopped
     healthcheck:
       disable: true
@@ -22,6 +22,11 @@ services:
         --tar1090-use-api --write-json-globe-index
         --json-reliable=2 --ac-hash-bits 18
         --net-receiver-id --net-ingest
+        --net-uuid-policy=/policy/policy.so
+        --net-uuid-config=/policy/readsbee.conf
+        --net-uuid-allow-file=/feeders/allow.txt
+        --net-uuid-deny-file=/feeders/deny.txt
+        --net-uuid-status-dir=/run/readsbee
       - READSB_ENABLE_TRACES=true
       #- TAR1090_USEROUTEAPI=True
       - MAX_GLOBE_HISTORY=365
@@ -39,6 +44,12 @@ services:
       - /opt/ultrafeeder/globe_history:/var/globe_history
       - /opt/ultrafeeder/graphs1090:/var/lib/collectd
       - /proc/diskstats:/proc/diskstats:ro
+      # feeder policy (private, built from PantsForBirds/internal), readsb won't start without it
+      - ${FEEDER_POLICY_DIR:-/home/bird/feeder-policy}:/policy:ro
+      # allowed / blocked feeder UUIDs, reloaded on change (no restart)
+      - ./feeders:/feeders:ro
+      # no feeder IPs on the web: hide /data/clients.json
+      - ./nginx/08-private-data:/etc/s6-overlay/startup.d/08-private-data:ro
       # pfb-tiles: proxy /pfb-tiles/ to the service below (07-pfb-tiles adds it to tar1090's nginx site)
       - ./pfb-tiles:/opt/pfb-tiles:ro
       - ./pfb-tiles/07-pfb-tiles:/etc/s6-overlay/startup.d/07-pfb-tiles:ro
