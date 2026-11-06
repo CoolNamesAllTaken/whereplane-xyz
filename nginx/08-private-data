@@ -1,0 +1,14 @@
+#!/bin/bash
+# Keep feeder addresses private: tar1090 serves /run/readsb as /data/, and readsb's
+# clients.json / receivers.json list feeder IPs. Runs after 07-nginx-configure.
+site=/etc/nginx/sites-enabled/tar1090
+snippet=/etc/nginx/private-data.conf
+cat > "$snippet" <<'CONF'
+location = /data/clients.json { return 404; }
+location = /data/receivers.json { return 404; }
+CONF
+if [ -f "$site" ]; then
+    grep -q "include $snippet;" "$site" || \
+        sed -i "s#^\(\s*\)include /etc/nginx/nginx-tar1090-webroot.conf;#\1include $snippet;\n&#" "$site"
+fi
+exit 0
