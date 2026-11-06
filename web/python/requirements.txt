@@ -1,0 +1,7 @@
+# Runtime pins (same line as adsbee-aero).
+Django==5.2.17
+psycopg[binary]==3.3.5
+gunicorn==26.2.0
+whitenoise==6.12.0
+python-dotenv==1.0.1
+requests==2.34.2

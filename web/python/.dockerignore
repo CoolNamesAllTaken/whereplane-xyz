@@ -1,0 +1,4 @@
+**/__pycache__
+**/.pytest_cache
+whereplane_web/staticfiles
+whereplane_web/db.sqlite3

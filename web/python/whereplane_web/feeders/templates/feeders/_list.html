@@ -1,0 +1,11 @@
+<table class="list"><tbody>
+{% for e in entries %}<tr><td class="mono">{{ e.uuid }}</td><td class="muted">{{ e.note }}</td>
+  <td><form class="inline" method="post" action="{% url 'staff_list_remove' e.pk %}">{% csrf_token %}<button class="btn btn-sm btn-danger" title="Remove">✗</button></form></td></tr>
+{% empty %}<tr><td class="muted">○ Empty</td></tr>{% endfor %}
+</tbody></table>
+<form class="inline" method="post" action="{% url 'staff_list_add' %}" style="margin-top:.6rem">{% csrf_token %}
+  <input type="hidden" name="kind" value="{{ kind }}">
+  <input type="text" class="uuid-in" name="uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+  <input type="text" name="note" placeholder="note" maxlength="120">
+  <button class="btn btn-sm btn-primary">＋</button>
+</form>

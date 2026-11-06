@@ -1,0 +1,51 @@
+{% extends "feeders/base.html" %}
+{% load static %}
+{% block title %}Feeders · whereplane.xyz{% endblock %}
+{% block main %}
+<div class="wrap">
+  <div class="section-head" style="margin-top:1.25rem">
+    <h1>● Feeders</h1>
+    <span class="status online" title="Connected now"><span class="dot"></span>{{ online }}</span>
+    <span class="muted" title="Every feeder seen">of {{ feeders|length }}</span>
+  </div>
+  <div class="card table-wrap">
+    <table class="list">
+      <thead><tr>
+        <th>Feeder</th><th class="num" title="Mode S messages per second">msgs/s</th>
+        <th class="num" title="Distinct aircraft in the last minute">✈ now</th>
+        <th class="num" title="Farthest range, any altitude, last 7 days (98th percentile)">range</th>
+        <th class="hide-sm" title="Messages per second, relative">&nbsp;</th>
+        <th class="num">last seen</th>
+      </tr></thead>
+      <tbody>
+      {% for f in feeders %}
+        <tr class="{% if not f.online %}off{% endif %}">
+          <td class="name-cell">
+            <span class="status {% if f.online %}online{% else %}offline{% endif %}" title="{% if f.online %}Online{% else %}Offline{% endif %}"><span class="dot"></span></span>
+            <a href="{% url 'feeder' f.uuid %}">{{ f.display_name }}</a>
+            <span class="id">{{ f.uuid }}</span>
+          </td>
+          <td class="num">{% if f.online %}{{ f.msgs_s|floatformat:0 }}{% else %}–{% endif %}</td>
+          <td class="num">{% if f.online %}{{ f.aircraft_now }}{% else %}–{% endif %}</td>
+          <td class="num">{% if f.max_km %}{{ f.max_km }} km{% else %}–{% endif %}</td>
+          <td class="hide-sm" style="width:20%"><span class="bar" data-v="{{ f.msgs_s|floatformat:'0u' }}"></span></td>
+          <td class="num muted">{% if f.online %}now{% else %}{{ f.last_seen|timesince }} ago{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">○ No feeders yet</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Relative msgs/s bars, scaled to the busiest feeder.
+(function () {
+  const bars = [...document.querySelectorAll('.bar[data-v]')];
+  const top = Math.max(1, ...bars.map(b => +b.dataset.v || 0));
+  bars.forEach(b => { b.style.width = `${Math.max(0, 100 * (+b.dataset.v || 0) / top)}%`; b.title = `${b.dataset.v} msgs/s`; });
+})();
+</script>
+{% endblock %}
