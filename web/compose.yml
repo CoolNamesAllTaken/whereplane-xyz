@@ -1,6 +1,6 @@
 name: whereplane-web # prefix for container and volume names; separate from the globe stack
 
-# whereplane.xyz: the website (Django), its collector and a map tile cache, behind Caddy.
+# whereplane.xyz: the website (Django) and its collector, behind Caddy.
 # Reads the live readsb in the `globe` container over HTTP, read-only. See README.md.
 services:
   # Front door. Plain HTTP: TLS terminates at the birdbox nginx, like adsbee.aero.
@@ -16,22 +16,6 @@ services:
     volumes:
       - ./caddy:/etc/caddy:ro
     networks: [default, backend]
-
-  # Caching proxy for OSM tiles at /tiles/{z}/{x}/{y}.png (same as adsbee.aero's tiles service).
-  tiles:
-    image: nginx:1.28-alpine
-    restart: always
-    environment:
-      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
-      - NGINX_ENVSUBST_FILTER=^TILES_
-      - TILES_CACHE_MAX_SIZE=${WHEREPLANE_TILES_CACHE_MAX_SIZE:-4g}
-      - TILES_CACHE_INACTIVE=${WHEREPLANE_TILES_CACHE_INACTIVE:-30d}
-      - TILES_RATE_PER_SECOND=${WHEREPLANE_TILES_RATE_PER_SECOND:-20}
-      - TILES_RATE_BURST=${WHEREPLANE_TILES_RATE_BURST:-200}
-    volumes:
-      - ./tiles:/etc/nginx/templates:ro
-      - tiles:/var/cache/nginx/tiles
-    networks: [default]
 
   db:
     image: postgres:16.10
@@ -57,8 +41,10 @@ services:
         required: false
     environment:
       - WHEREPLANE_FEEDERS_DIR=/srv/feeders
-      - WHEREPLANE_READSBEE_STATUS_FILE=${WHEREPLANE_READSBEE_STATUS_FILE:-}
+      - WHEREPLANE_READSBEE_STATUS_FILE=/readsbee-status/readsbee.json
     volumes:
+      # readsbee's --net-uuid-status-dir (readsbee.json: rejected and flagged feeders), read-only. Staff page only.
+      - ${WHEREPLANE_READSBEE_STATUS_DIR:-/opt/readsbee-status}:/readsbee-status:ro
       # The folder readsbee reads (mount the folder, not the files: writes are atomic renames).
       - ${WHEREPLANE_FEEDERS_DIR:-../feeders}:/srv/feeders
     networks: [backend]
@@ -108,4 +94,3 @@ networks:
 
 volumes:
   db:      # feeders, samples, coverage: back up (or accept losing history)
-  tiles:   # OSM tile cache, not backed up

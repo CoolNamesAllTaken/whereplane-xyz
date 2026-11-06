@@ -2,60 +2,42 @@
 {% load static %}
 {% block head %}{% include "feeders/_map_head.html" %}{% endblock %}
 {% block main %}
-<section class="hero">
-  <div class="wrap">
-    <h1>Where's that plane?</h1>
-    <p>whereplane.xyz is a lil map for <a href="https://pantsforbirds.com/adsbee-1090/" style="color:#fff;text-decoration:underline">ADSBee</a> owners. Point your bee at <code>{{ feed_host }}:30004</code> (Beast) and it joins the map.</p>
-    <div class="btns">
-      <a class="btn btn-yellow" href="{{ globe_url }}/">✈ Live globe ↗</a>
-      <a class="btn btn-ghost" href="{% url 'coverage' %}">◎ Coverage</a>
-      <a class="btn btn-ghost" href="#feed">＋ Feed</a>
-    </div>
-    <div class="stats" id="live" data-api="{% url 'api_live' %}">
-      <div class="stat" title="ADSBees connected right now"><div class="k">● Feeders online</div><div class="v" data-k="feeders_online">{{ live.feeders_online }}</div></div>
-      <div class="stat" title="Aircraft on the map right now"><div class="k">✈ Aircraft</div><div class="v" data-k="aircraft">{{ live.aircraft }}</div></div>
-      <div class="stat" title="Mode S messages per second, all feeders"><div class="k">↯ Messages</div><div class="v"><span data-k="msgs_s">{{ live.msgs_s }}</span><small>/s</small></div></div>
-      <div class="stat" title="Positions per second, all feeders"><div class="k">◉ Positions</div><div class="v"><span data-k="pos_s">{{ live.pos_s }}</span><small>/s</small></div></div>
-    </div>
+<section class="wp-hero wrap">
+  <h1>Where's that <em>plane</em>?</h1>
+  <p class="lede">A lil map for ADSBee owners. Point your bee at <code>{{ feed_host }}:30004</code> and its aircraft join the globe.</p>
+  <div class="btns">
+    <a class="btn btn-yellow" href="{{ globe_url }}/">Open the live globe</a>
+    <a class="btn btn-ghost" href="#feed">Feed with your ADSBee</a>
+  </div>
+  <p class="fine">ADSBees only, please. Custom views: <a href="https://github.com/wiedehopf/tar1090/blob/master/README-query.md">tar1090 query parameters</a>.</p>
+</section>
+
+<section class="stats-bar wrap" id="live" data-api="{% url 'api_live' %}">
+  <div class="cols">
+    <div title="ADSBees connected right now"><p class="n num" data-k="feeders_online">{{ live.feeders_online }}</p><p class="c">feeders online</p></div>
+    <div title="Aircraft on the map right now"><p class="n num" data-k="aircraft">{{ live.aircraft }}</p><p class="c">aircraft now</p></div>
+    <div title="Mode S messages per second, all feeders"><p class="n num"><span data-k="msgs_s">{{ live.msgs_s }}</span><small>/s</small></p><p class="c">messages</p></div>
+    <div title="Positions per second, all feeders"><p class="n num"><span data-k="pos_s">{{ live.pos_s }}</span><small>/s</small></p><p class="c">positions</p></div>
   </div>
 </section>
 
-<div class="wrap">
-  <section class="section">
-    <div class="section-head"><h2>◎ Coverage</h2><span class="muted">last 24 h, lowest altitude heard</span><a class="right" href="{% url 'coverage' %}">3D map →</a></div>
-    {% include "feeders/_map.html" with mode="preview" %}
-  </section>
+<section class="block wrap">
+  <div class="sec-head"><h2 class="sec">Coverage</h2><a class="end" href="{% url 'coverage' %}">Coverage map by altitude →</a></div>
+  <p class="sub">Where our feeders heard aircraft in the last 24 hours, colored by the lowest altitude heard.</p>
+  {% include "feeders/_map.html" with mode="preview" %}
+</section>
 
-  <section class="section" id="feed">
-    <div class="section-head"><h2>＋ Feed with your ADSBee</h2><span class="muted">ADSBee 1090: on by default</span></div>
-    <div class="steps">
-      <div class="card step">
-        <h3>Get online</h3>
-        <p>Join Wi-Fi or plug in Ethernet.</p>
-        <span class="cmd">AT+WIFI_STA=1,&lt;ssid&gt;,&lt;password&gt;</span>
-      </div>
-      <div class="card step">
-        <h3>Check feed 6</h3>
-        <p>New bees feed us out of the box.</p>
-        <span class="cmd">AT+FEED?</span>
-        <p>Look for <code>{{ feed_host }}</code>, port <code>30004</code>, <code>BEAST</code>, active ✓.</p>
-      </div>
-      <div class="card step">
-        <h3>Missing? Add it</h3>
-        <span class="cmd">AT+FEED=6,{{ feed_host }},30004,1,BEAST</span>
-        <span class="cmd">AT+SETTINGS=SAVE</span>
-        <p>Or web console → Feeds → ＋, Beast.</p>
-      </div>
-      <div class="card step">
-        <h3>Find your bee</h3>
-        <p>Your ID: <code>AT+FEED_RECEIVER_ID?</code> (<code>bee0…</code>). The console's feed card links to your traffic on the globe.</p>
-        <p><a href="{% url 'feeders' %}">● Feeders →</a></p>
-      </div>
-    </div>
-    <p class="muted" style="font-size:.9rem;margin-top:.8rem">🐝 whereplane is for ADSBees: please don't point other receivers here. Thanks!</p>
-    <p class="muted" style="font-size:.9rem;margin-top:.3rem">Globe tricks: <a href="https://github.com/wiedehopf/tar1090/blob/master/README-query.md">tar1090 query parameters</a>.</p>
-  </section>
-</div>
+<section class="band wrap" id="feed">
+  <h2 class="sec sec-small">Feed with your ADSBee</h2>
+  <p class="sub">New ADSBee 1090s feed whereplane out of the box. To check:</p>
+  <div class="cols-4">
+    <div><h3><span class="step">1</span>Get online</h3><p>Join Wi-Fi or plug in Ethernet.</p><span class="cmd">AT+WIFI_STA=1,&lt;ssid&gt;,&lt;password&gt;</span></div>
+    <div><h3><span class="step">2</span>Check feed 6</h3><p>Look for <code>{{ feed_host }}</code>, port 30004, BEAST, active.</p><span class="cmd">AT+FEED?</span></div>
+    <div><h3><span class="step">3</span>Add it if missing</h3><span class="cmd">AT+FEED=6,{{ feed_host }},30004,1,BEAST</span><span class="cmd">AT+SETTINGS=SAVE</span><p>Or in the web console: Feeds, add, Beast.</p></div>
+    <div><h3><span class="step">4</span>Find your bee</h3><p><code>AT+FEED_RECEIVER_ID?</code> shows its ID; the console's feed card links to its traffic. Then look it up in <a href="{% url 'feeders' %}">Feeders</a>.</p></div>
+  </div>
+  <p class="note">whereplane is for ADSBees: please don't point other receivers here. Thanks!</p>
+</section>
 {% endblock %}
 {% block scripts %}
 <script type="module" src="{% static 'feeders/js/coverage_map.js' %}"></script>

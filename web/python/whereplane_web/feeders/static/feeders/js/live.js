@@ -8,8 +8,8 @@
             const r = await fetch(box.dataset.api, {cache: 'no-store'});
             const d = await r.json();
             box.querySelectorAll('[data-k]').forEach(el => { el.textContent = fmt(d[el.dataset.k] ?? 0); });
-            box.title = d.ok ? '' : '⚠ Data is stale';
-            box.style.opacity = d.ok ? '' : '0.6';
+            box.classList.toggle('stale', !d.ok);
+            box.title = d.ok ? '' : 'Data is a few minutes old';
         } catch (e) { /* keep the last numbers */ }
     }
     box.querySelectorAll('[data-k]').forEach(el => { el.textContent = fmt(el.textContent); });

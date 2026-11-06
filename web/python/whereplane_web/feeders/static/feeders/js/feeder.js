@@ -2,7 +2,6 @@
  * Feeder page: one uPlot chart per measure (one axis each), shared cursor, a value tooltip on
  * hover; 24h / 7d / 30d from /api/feeder/<uuid>/series.json. Also colors the range bars by band.
  */
-import {bandColor} from 'wp/colors';
 
 const box = document.getElementById('charts');
 const css = name => getComputedStyle(document.body).getPropertyValue(name).trim();
@@ -10,13 +9,9 @@ const fmt = (v, d = 0) => (v == null ? '–' : Number(v).toLocaleString('en-US',
 let windowKey = box.dataset.window;
 let plots = [];
 
-// Range bars and swatches: tar1090 altitude colors.
-document.querySelectorAll('[data-band][data-mid], .rbar[data-band]').forEach(el => {
-    const b = Number(el.dataset.band);
-    const mid = Number(el.dataset.mid ?? document.querySelector(`.band-sw[data-band="${b}"]`)?.dataset.mid ?? 0);
-    const c = bandColor(b, mid);
-    if (el.classList.contains('rbar')) { el.querySelectorAll('span').forEach(s => { s.style.background = c; }); } else { el.style.background = c; }
-});
+// Range bars and swatches: the band colors from site.css.
+document.querySelectorAll('.band-sw[data-band]').forEach(el => { el.style.background = `var(--band-${el.dataset.band})`; });
+document.querySelectorAll('.rbar[data-band]').forEach(el => el.querySelectorAll('span').forEach(s => { s.style.background = `var(--band-${el.dataset.band})`; }));
 
 document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); const was = b.innerHTML; b.textContent = '✓'; setTimeout(() => { b.innerHTML = was; }, 1200); } catch (e) { /* no clipboard */ }
@@ -66,7 +61,7 @@ function draw(d) {
         const opts = {
             width, height: 150, legend: {show: false},
             cursor: {sync: {key: sync.key}, points: {size: 8}, y: false},
-            scales: {x: {time: true, range: () => [d.from, d.to]}, y: {range: (u, min, max) => [0, Math.max(1, max * 1.1)]}},
+            scales: {x: {time: true, range: () => (bars ? [d.from - 43200, d.to + 43200] : [d.from, d.to])}, y: {range: (u, min, max) => [0, Math.max(1, max * 1.1)]}},
             axes: [{...axis, space: 60}, {...axis, size: 42, values: (u, vals) => vals.map(v => fmt(v))}],
             series: [{}, bars
                 ? {stroke: color, fill: color + '99', width: 0, paths: uPlot.paths.bars({size: [0.7, 40], radius: 0.2}), points: {show: false}}

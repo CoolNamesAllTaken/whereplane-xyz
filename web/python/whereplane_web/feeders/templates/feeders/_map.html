@@ -1,24 +1,25 @@
 {% load static %}{% comment %}
 The coverage map (static/feeders/js/coverage_map.js). mode: full (bands, windows, 3D, click → feeders),
-preview (2D, the whole box links to /coverage/), feeder (one feeder's cells, finer grid).
+preview (flat, the box links to /coverage/), feeder (one feeder's cells, finer grid).
 {% endcomment %}
 {% if mode != 'preview' %}
 <div class="map-bar">
-  <div class="chips" id="band-chips" title="Altitude bands: click to show or hide; double-click to show only one">
-    {% for b in bands %}<button type="button" class="chip band-chip on" data-band="{{ b.i }}" title="{{ b.tip }}"><span class="sw"></span>{{ b.label }}</button>{% endfor %}
-  </div>
-  <div class="chips right" title="Heard within">
-    {% for w in windows %}<a class="chip{% if w == window %} on{% endif %}" href="?w={{ w }}" data-window="{{ w }}">{{ w }}</a>{% endfor %}
+  {% if mode == 'full' %}<div class="seg bands" id="band-chips" role="group" aria-label="Altitude bands" title="Click to show or hide a band; double-click to show only it">
+    {% for b in bands %}<button type="button" data-band="{{ b.i }}" aria-pressed="true" title="{{ b.tip }}"><span class="sw"></span>{{ b.label }}</button>{% endfor %}
+  </div>{% endif %}
+  <div class="seg end" role="group" aria-label="Heard within">
+    {% for w in windows %}<a class="{% if w == window %}on{% endif %}" href="?w={{ w }}" data-window="{{ w }}">{{ w }}</a>{% endfor %}
   </div>
 </div>
 {% endif %}
 <div class="map-box {% if mode == 'full' %}map-full{% elif mode == 'feeder' %}map-feeder{% else %}map-preview{% endif %}" id="coverage"
      data-mode="{{ mode }}" data-window="{{ window|default:'24h' }}" data-feeder="{{ feeder_uuid|default:'' }}"
      data-api="{% url 'api_coverage' %}" data-cell-api="{% url 'api_cell' %}" data-feeder-url="{% url 'feeders' %}"
+     data-tiles="{{ globe_url }}/pfb-tiles/v2/{z}/{x}/{y}.pbf"
      data-worker="{% static 'feeders/vendor/maplibre/maplibre-gl-worker.js' %}">
   <div class="map" id="coverage-map"></div>
   <div class="map-tip" id="map-tip" hidden></div>
-  <div class="map-empty" id="map-empty" hidden>○ No coverage yet</div>
-  {% if mode == 'preview' %}<a class="preview-link" href="{% url 'coverage' %}" title="Open the coverage map" aria-label="Open the coverage map"></a>{% endif %}
+  <div class="map-empty" id="map-empty" hidden>No coverage yet</div>
+  {% if mode == 'preview' %}<a class="preview-link" href="{% url 'coverage' %}" aria-label="Open the coverage map"></a>{% endif %}
   <noscript><p class="map-empty">The map needs JavaScript.</p></noscript>
 </div>

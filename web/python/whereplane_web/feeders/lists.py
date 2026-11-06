@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from datetime import datetime
+from datetime import timezone as dt_timezone
 from pathlib import Path
 
 from django.conf import settings
@@ -59,20 +61,39 @@ def _entries(items) -> list[dict]:
     for item in items if isinstance(items, list) else []:
         if isinstance(item, str):
             item = {'uuid': item}
-        if isinstance(item, dict) and readsb.normalize_uuid(str(item.get('uuid', ''))):
-            # Only what the staff page shows; anything else in the file (an address) is dropped here.
-            out.append({k: item[k] for k in ('uuid', 'reason', 'count', 'last_seen') if k in item})
+        if isinstance(item, dict) and readsb.normalize_uuid(str(item.get('uuid') or '')):
+            # Only what the staff page shows; anything else in the file is dropped here.
+            out.append({k: item[k] for k in ('uuid', 'reason', 'code', 'count', 'open', 'sources', 'last_seen') if k in item})
+    return out
+
+
+def _from_readsbee(doc: dict) -> dict:
+    """readsbee.json (--net-uuid-status-dir): "rejected" [{uuid, reason, code, open, connections, first, last}],
+    "receivers" [{uuid, state, code, sources, flagged, dropped, ...}]."""
+    rejected = []
+    for r in doc.get('rejected') or []:
+        if isinstance(r, dict):
+            rejected.append({**r, 'count': r.get('connections'),
+                             'last_seen': r.get('last') if isinstance(r.get('last'), (int, float)) else None})
+    flagged = {}
+    for r in doc.get('receivers') or []:
+        if isinstance(r, dict) and r.get('flagged') and r.get('uuid'):
+            f = flagged.setdefault(r['uuid'], {'uuid': r['uuid'], 'reason': 'reuse', 'sources': 0})
+            f['sources'] = max(f['sources'], int(r.get('sources') or 0))
+    out = {'rejected': _entries(rejected), 'flagged': _entries(list(flagged.values()))}
+    for e in out['rejected']:
+        if isinstance(e.get('last_seen'), (int, float)):
+            e['last_seen'] = datetime.fromtimestamp(e['last_seen'], tz=dt_timezone.utc)
     return out
 
 
 def readsbee_status() -> dict:
     """
-    What readsbee decided about feeders, from WHEREPLANE_READSBEE_STATUS_FILE (staff only):
-    {"rejected": [...], "flagged": [...]}, each a list of UUIDs or of objects with "uuid" and
-    optional "reason", "count", "last_seen". A plain list or one UUID per line means rejected.
-    Missing or unreadable file: both empty.
+    What readsbee decided about feeders (staff only), from WHEREPLANE_READSBEE_STATUS_FILE: readsbee.json as
+    readsbee writes it, or {"rejected": [...], "flagged": [...]}, or a list / one UUID per line (rejected).
+    Missing or unreadable file: both empty, and "missing" set.
     """
-    empty = {'rejected': [], 'flagged': []}
+    empty = {'rejected': [], 'flagged': [], 'missing': True}
     path = settings.WHEREPLANE_READSBEE_STATUS_FILE
     if not path:
         return empty
@@ -83,9 +104,11 @@ def readsbee_status() -> dict:
     try:
         doc = json.loads(text)
     except ValueError:
-        return {'rejected': [{'uuid': u} for u in parse(text)], 'flagged': []}
+        return {'rejected': [{'uuid': u} for u in parse(text)], 'flagged': [], 'missing': False}
     if isinstance(doc, list):
-        return {'rejected': _entries(doc), 'flagged': []}
+        return {'rejected': _entries(doc), 'flagged': [], 'missing': False}
     if isinstance(doc, dict):
-        return {'rejected': _entries(doc.get('rejected')), 'flagged': _entries(doc.get('flagged'))}
+        if 'receivers' in doc or 'filter' in doc:
+            return {**_from_readsbee(doc), 'missing': False}
+        return {'rejected': _entries(doc.get('rejected')), 'flagged': _entries(doc.get('flagged')), 'missing': False}
     return empty

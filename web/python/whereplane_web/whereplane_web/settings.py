@@ -133,6 +133,6 @@ WHEREPLANE_POLL_SECONDS = float(os.getenv('WHEREPLANE_POLL_SECONDS', '10'))
 # allow.txt / deny.txt for readsbee (one UUID per line, # comments); shared with the globe stack.
 WHEREPLANE_FEEDERS_DIR = Path(os.getenv('WHEREPLANE_FEEDERS_DIR', '/srv/feeders'))
 # readsbee's machine-readable feeder status (rejected and flagged UUIDs), shown on /staff/ only.
-WHEREPLANE_READSBEE_STATUS_FILE = os.getenv('WHEREPLANE_READSBEE_STATUS_FILE', '')
+WHEREPLANE_READSBEE_STATUS_FILE = os.getenv('WHEREPLANE_READSBEE_STATUS_FILE', '/readsbee-status/readsbee.json')
 WHEREPLANE_GLOBE_URL = os.getenv('WHEREPLANE_GLOBE_URL', 'https://globe.whereplane.xyz').rstrip('/')
 WHEREPLANE_FEED_HOST = os.getenv('WHEREPLANE_FEED_HOST', 'feed.whereplane.xyz')

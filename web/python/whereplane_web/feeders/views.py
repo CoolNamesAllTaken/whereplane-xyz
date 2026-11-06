@@ -71,6 +71,7 @@ def feeder_page(request, uuid):
         'distinct_today': max(queries.distinct_today(f), f.aircraft_now if f.online else 0),
         'uptime': duration(timezone.now() - f.connected_since) if f.online and f.connected_since else None,
         'window': queries.window_of(request.GET.get('w')), 'windows': list(queries.WINDOWS),
+        'series_window': queries.window_of(request.GET.get('w')) if request.GET.get('w') in ('24h', '7d', '30d') else '24h',
         'fresh': queries.fresh()})
 
 
@@ -131,6 +132,7 @@ def staff(request):
     for r in rb['rejected']:
         r['allowed'], r['denied'] = ('allow', r['uuid']) in listed, ('deny', r['uuid']) in listed
     flags = {r['uuid']: r.get('reason') or 'flagged' for r in rb['flagged']}
+    status_missing = rb['missing']
     feeders = list(Feeder.objects.order_by('hidden', '-online', 'uuid'))
     for f in feeders:
         f.flag = flags.get(f.uuid)
@@ -138,7 +140,7 @@ def staff(request):
         'nav': 'staff', 'status': st, 'fresh': queries.fresh(),
         'allow': ListEntry.objects.filter(kind=ListEntry.ALLOW),
         'deny': ListEntry.objects.filter(kind=ListEntry.DENY),
-        'rejected': rb['rejected'], 'flagged': rb['flagged'], 'status_file': settings.WHEREPLANE_READSBEE_STATUS_FILE,
+        'rejected': rb['rejected'], 'flagged': rb['flagged'], 'status_file': settings.WHEREPLANE_READSBEE_STATUS_FILE, 'status_missing': status_missing,
         'feeders': feeders,
         'feeders_dir': settings.WHEREPLANE_FEEDERS_DIR})
 

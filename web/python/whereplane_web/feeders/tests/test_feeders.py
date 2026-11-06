@@ -333,10 +333,32 @@ def test_staff_page_and_rename(staff_client, collected, feeders_dir, settings, t
 def test_readsbee_status_formats(settings, tmp_path):
     p = tmp_path / 'r'
     settings.WHEREPLANE_READSBEE_STATUS_FILE = str(p)
-    assert lists.readsbee_status() == {'rejected': [], 'flagged': []}
+    assert lists.readsbee_status() == {'rejected': [], 'flagged': [], 'missing': True}
     p.write_text(f'# rejected\n{OTHER}\njunk\n')
     assert lists.readsbee_status()['rejected'] == [{'uuid': OTHER}]
     p.write_text(json.dumps([OTHER, {'uuid': BEE, 'reason': 'r'}]))
     assert [r['uuid'] for r in lists.readsbee_status()['rejected']] == [OTHER, BEE]
     p.write_text(json.dumps({'rejected': [], 'flagged': [BEE, 'nope']}))
     assert lists.readsbee_status()['flagged'] == [{'uuid': BEE}]
+
+
+def test_readsbee_json(settings, tmp_path):
+    """The file readsbee writes (--net-uuid-status-dir, readsbee.c)."""
+    p = tmp_path / 'readsbee.json'
+    settings.WHEREPLANE_READSBEE_STATUS_FILE = str(p)
+    p.write_text(json.dumps({
+        'now': 1793919125.0, 'filter': {'active': True, 'max_sources': 2, 'reuse_action': 'flag'},
+        'rejected_connections': {'policy': 3}, 'dropped_messages': {'pending': 10}, 'reuse_flagged': 1,
+        'rejected': [{'uuid': OTHER, 'reason': 'policy', 'code': 2, 'open': 1, 'connections': 3,
+                      'first': 1793900000, 'last': 1793919000}],
+        'receivers': [{'uuid': BEE, 'state': 'ok', 'code': 0, 'sources': 3, 'flagged': True, 'dropped': 0, 'ext': {'ec': 5}},
+                      {'uuid': BEE, 'state': 'ok', 'code': 0, 'sources': 3, 'flagged': True, 'dropped': 0},
+                      {'uuid': BEE2, 'state': 'ok', 'code': 0, 'sources': 1, 'flagged': False, 'dropped': 0},
+                      {'uuid': None, 'state': 'pending', 'code': 0, 'sources': 0, 'flagged': False, 'dropped': 4}],
+    }))
+    got = lists.readsbee_status()
+    assert not got['missing']
+    r = got['rejected'][0]
+    assert (r['uuid'], r['reason'], r['code'], r['count']) == (OTHER, 'policy', 2, 3)
+    assert r['last_seen'].timestamp() == 1793919000
+    assert got['flagged'] == [{'uuid': BEE, 'reason': 'reuse', 'sources': 3}]

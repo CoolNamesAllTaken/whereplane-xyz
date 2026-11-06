@@ -1,8 +1,7 @@
 # whereplane.xyz web
 
 The whereplane.xyz website: home, coverage map, feeder list, a page per feeder, staff page.
-Django + Postgres behind Caddy, plus a collector that reads the live readsb and an OSM tile
-cache. Its own compose project (`whereplane-web`), deployed separately from the `globe` stack in
+Django + Postgres behind Caddy, plus a collector that reads the live readsb. Its own compose project (`whereplane-web`), deployed separately from the `globe` stack in
 the repository root. Same shape as PantsForBirds/adsbee-aero.
 
 | URL | Contents |
@@ -14,14 +13,12 @@ the repository root. Same shape as PantsForBirds/adsbee-aero.
 | `/staff/` | Superusers: allow/deny lists, what readsbee rejected or flagged, rename/hide feeders |
 | `/admin/` | Django admin (sign-in for `/staff/` too) |
 | `/api/live.json`, `/api/coverage.json`, `/api/cell.json`, `/api/network.json`, `/api/feeder/<uuid>/series.json` | What the pages draw |
-| `/tiles/{z}/{x}/{y}.png` | OpenStreetMap tiles through a caching proxy (same as adsbee.aero's) |
 
 ## Architecture
 
 ```
 browser -> birdbox nginx :443 (TLS) -> whereplane.server:8190 -> caddy (web)
-             caddy /tiles/* -> tiles (nginx proxy_cache) -> tile.openstreetmap.org
-             caddy /*       -> site (Django, gunicorn, whitenoise) -> db (Postgres)
+             caddy  -> site (Django, gunicorn, whitenoise) -> db (Postgres)
 collector (same image) -> http://host.docker.internal:80 (globe: tar1090 nginx -> readsb), read-only
 site -> ${WHEREPLANE_FEEDERS_DIR}/allow.txt, deny.txt  (read by readsbee)
 ```
@@ -76,11 +73,11 @@ with an optional `# note`. Each change rewrites both files by temp file + rename
 reads half a file; mount the folder into `globe`, not the single files. The database is the source:
 hand edits to the files are overwritten. Keep the two files out of git (generated).
 
-Which feeders are accepted is readsbee's decision; this site doesn't judge IDs. readsbee's
-feeder status shows on `/staff/` only, never on public pages, when
-`WHEREPLANE_READSBEE_STATUS_FILE` points at it: JSON `{"rejected": [...], "flagged": [...]}`,
-each a list of UUIDs or of `{"uuid", "reason", "count", "last_seen"}` (anything else, such as an
-address, is ignored). A flagged feeder gets a ⚠ chip in the staff feeder table.
+Which feeders are accepted is readsbee's decision; this site doesn't judge IDs. readsbee writes `readsbee.json`
+to its `--net-uuid-status-dir` every 10 s (rejected UUIDs with reason and connections, per-receiver state and reuse
+flags; no addresses). Bind that folder into the web stack read-only (`WHEREPLANE_READSBEE_STATUS_DIR`, default
+`/opt/readsbee-status`, mounted at `/readsbee-status`). `/staff/` shows rejected and flagged feeders from it, with allow /
+deny buttons; public pages never show it. A missing file shows as "no readsbee status".
 
 ## Run it
 
@@ -99,7 +96,7 @@ Settings (`.env.whereplane`): `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
 `POSTGRES_*`, `WHEREPLANE_HTTP_BIND` / `WHEREPLANE_HTTP_PORT` (default 127.0.0.1:8190), `WHEREPLANE_TRUSTED_PROXIES`
 (whose X-Forwarded-For Caddy believes),
 `WHEREPLANE_READSB_URL`, `WHEREPLANE_POLL_SECONDS`, `WHEREPLANE_FEEDERS_DIR`,
-`WHEREPLANE_READSBEE_STATUS_FILE`, `WHEREPLANE_TILES_*`.
+`WHEREPLANE_READSBEE_STATUS_DIR` (host folder mounted read-only at /readsbee-status).
 
 ## Going live (needs the admin's OK)
 
@@ -110,5 +107,14 @@ Settings (`.env.whereplane`): `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
    WordPress.
 3. When readsbee replaces `globe`, mount the same `feeders/` folder into it.
 
-Vendored, no CDN: MapLibre GL 6.14 (BSD-3), uPlot 1.6.32 (MIT), Inter (OFL), copied from
-adsbee-aero. Map colors: tar1090's altitude ramp.
+## Look
+
+pantsforbirds.com's (PantsForBirds/wordPRess, `pfb-storefront`): its tokens, forest header and footer with the green
+band, yellow links, the dark hero with the yellow stats bar, Source Sans. Behind the header, the home hero and the
+footer runs the theme's live traffic map, `static/feeders/js/site-traffic.js`, ported from the theme's
+`assets/js/site-traffic.js` (aircraft from globe.whereplane.xyz's `/re-api/` over the faint pfb-tiles v2 map; still frame
+for reduced motion, pauses offscreen). The coverage map draws the same pfb-tiles v2 vector tiles (z0-z9; z10 near the
+stations is not used, so every zoom overzooms z9).
+
+Vendored, no CDN: MapLibre GL 6.14 (BSD-3), uPlot 1.6.32 (MIT) copied from adsbee-aero, Source Sans 3 (OFL,
+@fontsource-variable/source-sans-3 5.2.8). Coverage colors: one ordered ramp per band, brand yellow (ground) to forest green (30k+), `--band-*` in site.css.

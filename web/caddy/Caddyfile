@@ -14,13 +14,6 @@ http://:80 {
 	@noindex path /admin* /staff*
 	header @noindex X-Robots-Tag "noindex, nofollow"
 
-	# OpenStreetMap tiles through the caching proxy (tiles/nginx.conf.template).
-	handle /tiles/* {
-		reverse_proxy tiles:80 {
-			header_up X-Real-IP {client_ip}
-		}
-	}
-
 	# Everything else is the Django site, static files included (whitenoise).
 	handle {
 		request_body {

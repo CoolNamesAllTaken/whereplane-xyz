@@ -29,7 +29,7 @@ BANDS = (
 NUM_BANDS = len(BANDS)
 BAND_TIPS = ('On the ground', 'Below 1,000 ft', '1,000–3,000 ft', '3,000–10,000 ft',
              '10,000–20,000 ft', '20,000–30,000 ft', 'Above 30,000 ft')
-# Representative altitude per band (ft), for tar1090-style colors.
+# Representative altitude per band (ft).
 BAND_MID_FT = (0, 500, 2000, 6500, 15000, 25000, 36000)
 
 
