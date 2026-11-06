@@ -3,8 +3,7 @@ services:
   globe:
     # ultrafeeder with readsbee (readsb fork with a feeder UUID filter, ADS-L and Remote ID decoding), built
     # WITH_UUIDS. https://github.com/PantsForBirds/readsbee. Rollback: see README.md.
-    # readsbee PR #3 (phase 2); swap for sha-<merge commit>@<digest> once it's merged.
-    image: ghcr.io/pantsforbirds/readsbee:pr-3@sha256:d9f8e956d8f3639642c57bc2545b63141b7bb4617ec723cfdda42ecb5a107258
+    image: ghcr.io/pantsforbirds/readsbee:sha-bca7ef4@sha256:562058738998e8b2e58e99890a95a71949de6e961b799e1bbdbefaef66952fdf
     restart: unless-stopped
     healthcheck:
       disable: true
