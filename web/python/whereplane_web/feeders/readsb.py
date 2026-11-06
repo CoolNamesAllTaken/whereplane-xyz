@@ -58,8 +58,9 @@ LON_CELLS = 3600
 
 
 def cell_of(lat: float, lon: float) -> tuple[int, int]:
-    lat_i = min(max(int(math.floor((lat + 90.0) / CELL_DEG)), 0), LAT_CELLS - 1)
-    lon_i = int(math.floor((lon + 180.0) / CELL_DEG)) % LON_CELLS
+    # rounded first: (35.2 + 90) / 0.1 is 1251.9999999999998 in floating point, which would floor to the row below
+    lat_i = min(max(int(math.floor(round((lat + 90.0) / CELL_DEG, 6))), 0), LAT_CELLS - 1)
+    lon_i = int(math.floor(round((lon + 180.0) / CELL_DEG, 6))) % LON_CELLS
     return lat_i, lon_i
 
 

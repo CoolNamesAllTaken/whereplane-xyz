@@ -95,6 +95,7 @@ def test_cells_are_floor_indexed_and_never_negative():
     assert readsb.cell_of(0.05, 0.05) == (900, 1800)
     assert readsb.cell_of(-0.05, -0.05) == (899, 1799)
     assert readsb.cell_of(89.99, 179.99) == (1799, 3599)
+    assert readsb.cell_of(35.2, -97.3) == (1252, 827)       # exactly on edges: the cell north / east of them
     s, w, n, e = readsb.cell_bounds(*readsb.cell_of(34.05, -117.83))
     assert s <= 34.05 < n and w <= -117.83 < e
     # Merged cells: integer division keeps containment.

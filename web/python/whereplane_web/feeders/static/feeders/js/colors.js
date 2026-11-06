@@ -1,7 +1,7 @@
 /*
- * Altitude band colors: --band-0 (ground) to --band-6 (30k+) in site.css, an ordered ramp from the brand yellow to
- * forest green, with its own steps in dark mode. Read from CSS so the map follows the theme.
+ * Altitude band colors: --band-0 (ground) to --band-6 (30k+) in site.css, tar1090's altitude colors at each band's
+ * middle, the same in both themes. Read from CSS so the map, legend and range table share one definition.
  */
 export function bandColor(band) {
-    return getComputedStyle(document.documentElement).getPropertyValue(`--band-${band}`).trim() || '#5E9F4B';
+    return getComputedStyle(document.documentElement).getPropertyValue(`--band-${band}`).trim() || '#888888';
 }

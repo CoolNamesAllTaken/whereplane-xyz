@@ -117,4 +117,4 @@ for reduced motion, pauses offscreen). The coverage map draws the same pfb-tiles
 stations is not used, so every zoom overzooms z9).
 
 Vendored, no CDN: MapLibre GL 6.14 (BSD-3), uPlot 1.6.32 (MIT) copied from adsbee-aero, Source Sans 3 (OFL,
-@fontsource-variable/source-sans-3 5.2.8). Coverage colors: one ordered ramp per band, brand yellow (ground) to forest green (30k+), `--band-*` in site.css.
+@fontsource-variable/source-sans-3 5.2.8). Coverage colors: tar1090's altitude colors at each band's middle (`--band-*` in site.css), as on the globe and adsbee.aero's range maps.

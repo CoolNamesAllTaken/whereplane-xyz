@@ -9,7 +9,7 @@
     <h1>{{ f.display_name }}</h1>
     <span class="status {% if f.online %}online{% else %}offline{% endif %}"><span class="dot"></span>{% if f.online %}online{% else %}offline{% endif %}</span>
     <span class="uuid">{{ f.uuid }} <button type="button" class="copy" data-copy="{{ f.uuid }}" title="Copy" aria-label="Copy"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></button></span>
-    <div class="btns"><a class="btn btn-green" href="{{ globe_url }}/?feed={{ f.uuid }}" title="Only this feeder's aircraft">Its traffic on the globe</a></div>
+    <div class="btns"><a class="btn btn-green" href="{{ globe_url }}/?feed={{ f.uuid }}" title="This feeder's aircraft on the globe">Live traffic</a></div>
   </div>
 
   <div class="figures">

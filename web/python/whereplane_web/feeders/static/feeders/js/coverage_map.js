@@ -5,7 +5,7 @@
  *
  * 3D: each band is a slab stacked at its own height (equal thickness, not to scale), so every
  * altitude shows at once; tilt and turn with right-drag or two fingers. 2D: each cell colored by
- * the lowest shown band heard there. Band colors: one ordered ramp, yellow (ground) to forest green (colors.js).
+ * the lowest shown band heard there. Band colors: tar1090's altitude colors (colors.js, --band-* in site.css).
  * Hover: band and feeder count. Click: the feeders that heard that cell (/api/cell.json).
  * Data: /api/coverage.json, refreshed every 2 minutes.
  */
@@ -29,12 +29,13 @@ let shown = new Set();            // visible band indexes
 let tilted = mode !== 'preview';
 const PITCH = root.clientWidth < 600 ? 50 : 55;
 
-// The basemap's colors. Light: quiet greens and grays on the page tint. Dark: site-traffic.js's LOOKS.dark on --pfb-deep.
+// The basemap's colors: faint and neutral, so the altitude colors carry the map. Light: near-white land, pale water.
+// Dark: charcoal land, water and lines a little lighter.
 function basePaint() {
-    return dark() ? {bg: '#0B2A1A', water: 'rgba(150,220,180,.07)', edge: 'rgba(190,235,205,.24)', river: 'rgba(150,220,180,.22)',
-                     road: 'rgba(255,224,120,.16)', border: 'rgba(217,232,222,.28)'}
-                  : {bg: '#F4F8F5', water: '#DCEBE2', edge: 'rgba(0,122,54,.22)', river: 'rgba(0,122,54,.18)',
-                     road: 'rgba(95,107,99,.20)', border: 'rgba(95,107,99,.45)'};
+    return dark() ? {bg: '#181818', water: '#20262A', edge: 'rgba(255,255,255,.14)', river: 'rgba(160,190,210,.20)',
+                     road: 'rgba(255,255,255,.10)', border: 'rgba(255,255,255,.28)'}
+                  : {bg: '#FAFAFA', water: '#E3ECEF', edge: 'rgba(60,90,110,.20)', river: 'rgba(60,90,110,.20)',
+                     road: 'rgba(0,0,0,.10)', border: 'rgba(0,0,0,.30)'};
 }
 function baseLayers() {
     const c = basePaint();
@@ -124,13 +125,16 @@ function addLayers() {
             paint: {
                 'fill-extrusion-color': ['case', ['boolean', ['feature-state', 'hover'], false], '#ffffff', ['get', 'color']],
                 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'top'],
-                'fill-extrusion-opacity': 0.82, 'fill-extrusion-vertical-gradient': true,
+                // Low bands solid, high ones faint (as adsbee.aero's range map): the wide high slabs sit over the low ones.
+                // No vertical gradient: shaded walls between neighboring cells read as stripes.
+                'fill-extrusion-opacity': 0.9 - 0.6 * i / Math.max(bands.length - 1, 1), 'fill-extrusion-vertical-gradient': false,
             },
         });
     });
     map.addLayer({
         id: 'flat', type: 'fill', source: 'flat', layout: {visibility: tilted ? 'none' : 'visible'},
-        paint: {'fill-color': ['get', 'color'],
+        paint: {'fill-antialias': false,           // antialiased edges leave hairline seams between neighboring cells
+                'fill-color': ['get', 'color'],
                 'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.95, dark() ? 0.8 : 0.6],
                 'fill-outline-color': 'rgba(0,0,0,0)'},
     });
