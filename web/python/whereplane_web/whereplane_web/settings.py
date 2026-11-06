@@ -134,5 +134,10 @@ WHEREPLANE_POLL_SECONDS = float(os.getenv('WHEREPLANE_POLL_SECONDS', '10'))
 WHEREPLANE_FEEDERS_DIR = Path(os.getenv('WHEREPLANE_FEEDERS_DIR', '/srv/feeders'))
 # readsbee's machine-readable feeder status (rejected and flagged UUIDs), shown on /staff/ only.
 WHEREPLANE_READSBEE_STATUS_FILE = os.getenv('WHEREPLANE_READSBEE_STATUS_FILE', '/readsbee-status/readsbee.json')
+# Feeder IDs several bees share because their device ID was never set: accepted, left off public lists and maps,
+# their page asks the owner to contact support. Comma-separated.
+WHEREPLANE_UNSET_IDS = [u.strip().lower() for u in os.getenv(
+    'WHEREPLANE_UNSET_IDS', 'bee00000-0000-0000-bee0-000000000000').split(',') if u.strip()]
+WHEREPLANE_SUPPORT_EMAIL = os.getenv('WHEREPLANE_SUPPORT_EMAIL', 'john@pantsforbirds.com')
 WHEREPLANE_GLOBE_URL = os.getenv('WHEREPLANE_GLOBE_URL', 'https://globe.whereplane.xyz').rstrip('/')
 WHEREPLANE_FEED_HOST = os.getenv('WHEREPLANE_FEED_HOST', 'feed.whereplane.xyz')

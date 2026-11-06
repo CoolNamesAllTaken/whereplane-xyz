@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, Sum
 from django.utils import timezone
@@ -37,9 +38,9 @@ def readsbee_on() -> bool:
 
 
 def public_q():
-    """Who public pages may show: not hidden, not rejected by readsbee, and, while readsbee's status is there,
-    accepted by it at least once (so feeders collected before readsbee don't linger)."""
-    q = Q(hidden=False) & ~Q(uuid__in=rejected_uuids())
+    """Who public pages may show: not hidden, not an unset ID, not rejected by readsbee, and, while readsbee's
+    status is there, accepted by it at least once (so feeders collected before readsbee don't linger)."""
+    q = Q(hidden=False) & ~Q(uuid__in=rejected_uuids()) & ~Q(uuid__in=settings.WHEREPLANE_UNSET_IDS)
     return q & Q(accepted=True) if readsbee_on() else q
 
 

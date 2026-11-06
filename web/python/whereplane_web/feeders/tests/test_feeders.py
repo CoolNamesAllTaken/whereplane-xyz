@@ -471,3 +471,62 @@ def test_hide_drops_from_public_without_blocking(staff_client, collected, feeder
     bee.refresh_from_db()
     assert bee.online and bee.hidden
     assert BEE in staff_client.get('/staff/').content.decode()
+
+
+# ─── Unset device ID ──────────────────────────────────────────────────────
+UNSET = 'bee00000-0000-0000-bee0-000000000000'
+
+
+def unset_fetch(path):
+    if path == '/data/clients.json':
+        return {**CLIENTS, 'clients': CLIENTS['clients'] + [[UNSET, '   5.6.7.8 port 2', 3, 99, 50.0, 5.0, 0, -1, 10]]}
+    if path.endswith(f'filter_uuid={UNSET}'):
+        return {'aircraft': [ac('c00001', lat=40.0, lon=-100.0, alt=15000)]}
+    return fake_fetch(path)
+
+
+@pytest.mark.django_db
+def test_unset_id_hidden_by_default_but_collected(staff_client, feeders_dir):
+    Collector(unset_fetch, clock=lambda: 1000.0).step()
+    f = Feeder.objects.get(uuid=UNSET)
+    assert f.online and not f.hidden                      # accepted and collected, no staff action needed
+    assert CoverageCell.objects.filter(feeder=f).exists()
+    lists.write_all()
+    assert UNSET not in (feeders_dir / 'deny.txt').read_text()
+    public = Client()
+    assert UNSET not in public.get('/feeders/').content.decode()
+    assert public.get('/api/live.json').json()['feeders_online'] == 2
+    la, lo = readsb.cell_of(40.0, -100.0)
+    assert all((r[0], r[1]) != (la, lo) for r in public.get('/api/coverage.json?res=1').json()['cells'])
+    assert public.get(f'/api/cell.json?la={la}&lo={lo}&res=1').json()['feeders'] == []
+    assert public.get(f'/api/coverage.json?feeder={UNSET}').status_code == 404
+    assert public.get(f'/api/feeder/{UNSET}/series.json').status_code == 404
+    html = staff_client.get('/staff/').content.decode()
+    assert UNSET in html and 'unset ID' in html
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('collect', [True, False])
+def test_unset_id_page_shows_support_notice(client, collect):
+    if collect:
+        Collector(unset_fetch, clock=lambda: 1000.0).step()
+    for uuid in (UNSET, UNSET.upper()):
+        r = client.get(f'/feeder/{uuid}/')
+        assert r.status_code == 200
+        html = r.content.decode()
+        assert 'missing its device ID' in html
+        assert 'href="mailto:john@pantsforbirds.com' in html
+        assert 'id="charts"' not in html and 'id="coverage"' not in html and 'Live traffic' not in html
+
+
+@pytest.mark.django_db
+def test_unset_id_page_even_when_staff_hides_it(client):
+    Collector(unset_fetch, clock=lambda: 1000.0).step()
+    Feeder.objects.filter(uuid=UNSET).update(hidden=True)
+    assert client.get(f'/feeder/{UNSET}/').status_code == 200
+
+
+def test_unset_ids_setting(settings, client, db):
+    settings.WHEREPLANE_UNSET_IDS = [BEE]
+    assert 'missing its device ID' in client.get(f'/feeder/{BEE}/').content.decode()
+    assert client.get(f'/feeder/{UNSET}/').status_code == 404

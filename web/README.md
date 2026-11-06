@@ -73,6 +73,10 @@ with an optional `# note`. Each change rewrites both files by temp file + rename
 reads half a file; mount the folder into `globe`, not the single files. The database is the source:
 hand edits to the files are overwritten. They are not in git (`.gitignore`); `feeders/*.txt.example` hold the headers.
 
+**Unset IDs** (`WHEREPLANE_UNSET_IDS`, default `bee00000-0000-0000-bee0-000000000000`): one ID several bees share
+because their device ID was never set. Accepted and collected, left off public lists and maps, tagged on `/staff/`; its
+`/feeder/<uuid>/` page shows only a notice asking the owner to contact support (`WHEREPLANE_SUPPORT_EMAIL`).
+
 Which feeders are accepted is readsbee's decision; this site doesn't judge IDs. readsbee writes `readsbee.json`
 to its `--net-uuid-status-dir` every 10 s (rejected UUIDs with reason and connections, per-receiver state and reuse
 flags; no addresses). Bind that folder into the web stack read-only (`WHEREPLANE_READSBEE_STATUS_DIR`, default

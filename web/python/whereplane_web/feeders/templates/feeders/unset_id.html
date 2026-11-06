@@ -1,0 +1,14 @@
+{% extends "feeders/base.html" %}
+{% block title %}Device ID missing? · whereplane.xyz{% endblock %}
+{% block main %}
+<div class="wrap">
+  <div class="feeder-head">
+    <h1>Device ID missing?</h1>
+    <span class="uuid">{{ uuid }}</span>
+  </div>
+  <div class="notice">
+    <p><span class="notice-icon" aria-hidden="true">⚠</span> Your ADSBee may be missing its device ID.</p>
+    <p>Please contact customer support at <a href="mailto:{{ email }}?subject=ADSBee%20device%20ID">{{ email }}</a>.</p>
+  </div>
+</div>
+{% endblock %}
