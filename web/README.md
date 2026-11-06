@@ -71,7 +71,7 @@ Later: ADS-L, Remote ID and UAT counts per receiver in the same file (the feeder
 default `../feeders`, the repository root's `feeders/`): a comment header, then one UUID per line
 with an optional `# note`. Each change rewrites both files by temp file + rename, so readsbee never
 reads half a file; mount the folder into `globe`, not the single files. The database is the source:
-hand edits to the files are overwritten. Keep the two files out of git (generated).
+hand edits to the files are overwritten. They are not in git (`.gitignore`); `feeders/*.txt.example` hold the headers.
 
 Which feeders are accepted is readsbee's decision; this site doesn't judge IDs. readsbee writes `readsbee.json`
 to its `--net-uuid-status-dir` every 10 s (rejected UUIDs with reason and connections, per-receiver state and reuse

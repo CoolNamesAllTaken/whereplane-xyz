@@ -435,3 +435,39 @@ def test_rejected_by_readsbee_left_off_public_pages(settings, tmp_path, client, 
     Feeder.objects.filter(uuid=BEE).update(accepted=True)
     assert client.get(f'/feeder/{BEE}/').status_code == 200
     assert BEE in client.get('/feeders/').content.decode()
+
+
+@pytest.mark.django_db
+def test_collector_uses_readsbee_rates(settings, tmp_path):
+    doc = {'receivers': [{'uuid': BEE, 'state': 'ok', 'messages_s': 210.4, 'positions_s': 38.25, 'kbps': 30.1, 'conn_s': 715},
+                         {'uuid': BEE, 'state': 'ok', 'messages_s': 9.6, 'positions_s': 1.75, 'kbps': 1.9, 'conn_s': 61}]}
+    p = tmp_path / 'readsbee.json'
+    p.write_text(json.dumps(doc))
+    settings.WHEREPLANE_READSBEE_STATUS_FILE = str(p)
+    Collector(no_clients_fetch, clock=lambda: 1000.0).step()
+    bee = Feeder.objects.get(uuid=BEE)
+    assert (bee.msgs_s, bee.pos_s, bee.kbps) == (220.0, 40.0, 32.0)
+    assert abs((timezone.now() - bee.connected_since).total_seconds() - 715) < 5
+    assert FeederSample.objects.get(feeder=bee).msgs_s == 220.0
+
+
+@pytest.mark.django_db
+def test_hide_drops_from_public_without_blocking(staff_client, collected, feeders_dir):
+    lists.write_all()
+    deny_before = lists.parse((feeders_dir / 'deny.txt').read_text())
+    bee = Feeder.objects.get(uuid=BEE)
+    staff_client.post(f'/staff/feeder/{bee.pk}', {'name': '', 'hidden': '1'})
+    cache.clear()
+    public = Client()
+    assert BEE not in public.get('/feeders/').content.decode()
+    assert public.get(f'/feeder/{BEE}/').status_code == 404
+    la, lo = readsb.cell_of(34.0, -117.8)
+    assert all((r[0], r[1]) != (la, lo) for r in public.get('/api/coverage.json?res=1').json()['cells'])
+    assert public.get(f'/api/cell.json?la={la}&lo={lo}&res=1').json()['feeders'] == []
+    # not blocked: nothing written to deny.txt, and the collector keeps collecting it
+    assert lists.parse((feeders_dir / 'deny.txt').read_text()) == deny_before == []
+    assert not ListEntry.objects.exists()
+    Collector(fake_fetch, clock=lambda: 2000.0).step()
+    bee.refresh_from_db()
+    assert bee.online and bee.hidden
+    assert BEE in staff_client.get('/staff/').content.decode()
