@@ -1,9 +1,10 @@
 # Thanks to @wiedehopf for this configuration file!
 services:
   globe:
-    # ultrafeeder with readsbee (readsb fork with a feeder UUID filter), built WITH_UUIDS.
-    # https://github.com/PantsForBirds/readsbee. Rollback: see README.md.
-    image: ghcr.io/pantsforbirds/readsbee:sha-2cd8e7c@sha256:116b024f749cc72973a762d96d1a1685ef600ddfe95b38918972859c6f979ad2
+    # ultrafeeder with readsbee (readsb fork with a feeder UUID filter, ADS-L and Remote ID decoding), built
+    # WITH_UUIDS. https://github.com/PantsForBirds/readsbee. Rollback: see README.md.
+    # readsbee PR #3 (phase 2); swap for sha-<merge commit>@<digest> once it's merged.
+    image: ghcr.io/pantsforbirds/readsbee:pr-3@sha256:d9f8e956d8f3639642c57bc2545b63141b7bb4617ec723cfdda42ecb5a107258
     restart: unless-stopped
     healthcheck:
       disable: true
@@ -27,6 +28,7 @@ services:
         --net-uuid-allow-file=/feeders/allow.txt
         --net-uuid-deny-file=/feeders/deny.txt
         --net-uuid-status-dir=/run/readsbee
+        --readsbee-rid-globe --readsbee-rid-operator
       - READSB_ENABLE_TRACES=true
       #- TAR1090_USEROUTEAPI=True
       - MAX_GLOBE_HISTORY=365
@@ -56,6 +58,9 @@ services:
       # pfb-tiles: proxy /pfb-tiles/ to the service below (07-pfb-tiles adds it to tar1090's nginx site)
       - ./pfb-tiles:/opt/pfb-tiles:ro
       - ./pfb-tiles/07-pfb-tiles:/etc/s6-overlay/startup.d/07-pfb-tiles:ro
+      # drones on the globe: quadcopter icon, Remote ID panel and operator marker (drone/README.md)
+      - ./drone:/opt/pfb-drone:ro
+      - ./drone/08-pfb-drone:/etc/s6-overlay/startup.d/08-pfb-drone:ro
 
   # Static vector basemap tiles (OpenMapTiles schema, trimmed) for the map behind pantsforbirds.com's
   # live traffic: https://globe.whereplane.xyz/pfb-tiles/v1/{z}/{x}/{y}.pbf. See pfb-tiles/README.md.

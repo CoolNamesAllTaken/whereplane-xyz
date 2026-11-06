@@ -16,6 +16,9 @@ that filters Beast feeds by feeder UUID. Loopback (mlathub) is exempt.
   not served by globe). The website (`web/`) mounts it read-only: its feeder list and its staff page.
 - Website: `web/` (its own compose project, see `web/README.md`).
 - `/data/clients.json` (feeder IPs) returns 404 (`nginx/08-private-data`).
+- ADS-L aircraft and Remote ID drones from `READSBEE` feeds show on the globe. `--readsbee-rid-globe`: drones as
+  aircraft; `--readsbee-rid-operator`: operator ID and location in public outputs (`/data/remoteid.json`).
+  Drone icon, Remote ID panel and operator marker: `drone/` (see `drone/README.md`).
 
 ### Rollback
 
@@ -28,3 +31,6 @@ docker compose build --pull globe && docker compose up -d globe
 ```
 
 State in `/opt/ultrafeeder` is the same format either way.
+
+Back to readsbee phase 1 (no ADS-L / Remote ID): `image: ghcr.io/pantsforbirds/readsbee:sha-2cd8e7c@sha256:116b024f749cc72973a762d96d1a1685ef600ddfe95b38918972859c6f979ad2`
+and drop `--readsbee-rid-globe --readsbee-rid-operator`. The `drone/` mounts can stay (nothing to show).
