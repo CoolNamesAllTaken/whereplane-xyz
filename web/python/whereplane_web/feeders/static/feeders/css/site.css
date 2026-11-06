@@ -294,3 +294,10 @@ a.plain:hover { color: var(--link); text-decoration: underline; }
 .tag { font-size: .75em; padding: .05em .5em; border-radius: var(--pfb-radius-pill); border: 1px solid var(--line); color: var(--muted); font-weight: 600; white-space: nowrap; }
 .tag.ok { color: var(--link); border-color: currentColor; }
 .tag.warn { color: #8F6F00; border-color: #E6C766; background: #FFF8D9; }
+
+/* ---- Notice (unset device ID page) ---- */
+.notice { max-width: 36em; padding: 1.1em 1.4em; border: 1px solid var(--line); border-left: 4px solid var(--pfb-yellow); border-radius: var(--pfb-radius); background: var(--band); }
+.notice p { margin: 0; }
+.notice p + p { margin-top: .6em; }
+.notice-icon { color: #B38F00; margin-right: .2em; }
+[data-bs-theme="dark"] .notice-icon { color: var(--pfb-yellow); }

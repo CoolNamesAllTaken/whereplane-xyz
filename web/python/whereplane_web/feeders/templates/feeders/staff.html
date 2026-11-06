@@ -52,7 +52,7 @@
       <table class="list"><thead><tr><th>UUID</th><th>name</th><th class="num">msgs/s</th><th class="num">last seen</th></tr></thead><tbody>
       {% for f in feeders %}
         <tr class="{% if not f.online %}off{% endif %}">
-          <td><span class="status {% if f.online %}online{% else %}offline{% endif %}"><span class="dot"></span><a class="mono plain" href="{% url 'feeder' f.uuid %}">{{ f.uuid }}</a></span>{% if f.flag %} <span class="tag warn" title="Flagged by readsbee">⚠ {{ f.flag }}</span>{% endif %}{% if f.hidden %} <span class="tag">hidden</span>{% endif %}</td>
+          <td><span class="status {% if f.online %}online{% else %}offline{% endif %}"><span class="dot"></span><a class="mono plain" href="{% url 'feeder' f.uuid %}">{{ f.uuid }}</a></span>{% if f.flag %} <span class="tag warn" title="Flagged by readsbee">⚠ {{ f.flag }}</span>{% endif %}{% if f.hidden %} <span class="tag">hidden</span>{% endif %}{% if f.unset %} <span class="tag" title="Shared unset device ID: off public lists and maps, its page shows a support notice">unset ID</span>{% endif %}</td>
           <td><form class="inline" method="post" action="{% url 'staff_feeder' f.pk %}">{% csrf_token %}
             <input type="text" name="name" value="{{ f.name }}" placeholder="{{ f.display_name }}" maxlength="60" aria-label="Name">
             <label title="Hide from public pages and maps"><input type="checkbox" name="hidden" value="1"{% if f.hidden %} checked{% endif %}> hide</label>

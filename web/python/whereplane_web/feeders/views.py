@@ -61,6 +61,10 @@ def _public_feeder(uuid):
 
 
 def feeder_page(request, uuid):
+    if (uuid or '').lower() in settings.WHEREPLANE_UNSET_IDS:
+        # Several bees share this ID, so no stats: ask the owner to get in touch.
+        return render(request, 'feeders/unset_id.html', {
+            'nav': 'feeders', 'uuid': uuid.lower(), 'email': settings.WHEREPLANE_SUPPORT_EMAIL})
     f = _public_feeder(uuid)
     ranges = queries.feeder_ranges(f)
     rows = [{**b, 'range': r} for b, r in zip(_bands(), ranges)]
@@ -135,6 +139,7 @@ def staff(request):
     feeders = list(Feeder.objects.order_by('hidden', '-online', 'uuid'))
     for f in feeders:
         f.flag = flags.get(f.uuid)
+        f.unset = f.uuid in settings.WHEREPLANE_UNSET_IDS
     return render(request, 'feeders/staff.html', {
         'nav': 'staff', 'status': st, 'fresh': queries.fresh(),
         'allow': ListEntry.objects.filter(kind=ListEntry.ALLOW),
