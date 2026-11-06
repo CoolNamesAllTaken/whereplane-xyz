@@ -1,0 +1,2 @@
+# Feeder UUIDs allowed besides ADSBees (readsbee --net-uuid-allow-file).
+# One per line, # comments. Reloaded within 2 s of a change, no restart.
