@@ -30,6 +30,9 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv(
     'DJANGO_ALLOWED_HOSTS', f'{ROOT_DOMAIN},www.{ROOT_DOMAIN},localhost,127.0.0.1').split(',') if h.strip()]
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()] + [
     f'https://{h}' for h in ALLOWED_HOSTS]
+# The container healthcheck calls http://localhost:8000/healthz.
+if 'localhost' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('localhost')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Off for the LAN preview (plain http); on behind the birdbox nginx.

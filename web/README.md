@@ -102,14 +102,14 @@ Settings (`.env.whereplane`): `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
 `WHEREPLANE_READSB_URL`, `WHEREPLANE_POLL_SECONDS`, `WHEREPLANE_FEEDERS_DIR`,
 `WHEREPLANE_READSBEE_STATUS_DIR` (host folder mounted read-only at /readsbee-status).
 
-## Going live (needs the admin's OK)
+## Deployment
 
-1. Deploy this stack on whereplane.server with `WHEREPLANE_HTTP_BIND` set to its LAN address and
-   `WHEREPLANE_TRUSTED_PROXIES` to birdbox's (nginx there already proxies globe.whereplane.xyz to
-   whereplane.server:80), `WHEREPLANE_HTTPS_ONLY=1`.
-2. Point `birdbox-docker/nginx/whereplane.xyz.conf` for whereplane.xyz / www at it instead of
-   WordPress.
-3. When readsbee replaces `globe`, mount the same `feeders/` folder into it.
+Live since 2026-11-06 on whereplane.server, `~/git-checkouts/whereplane-xyz/web` (compose project
+`whereplane-web`), bound to 10.42.1.104:8190. birdbox nginx (`birdbox-docker/nginx/whereplane.xyz.conf`)
+proxies whereplane.xyz to it; `WHEREPLANE_TRUSTED_PROXIES=10.42.1.225/32`, `WHEREPLANE_HTTPS_ONLY=1`.
+Staff password: `web/secret/ADMIN_PASSWORD` on the server (not in git).
+Update: `git pull && docker compose up -d --build`.
+Rollback: in that nginx block, `proxy_pass http://whereplane-wordpress-site;` and reload (WordPress still runs).
 
 ## Look
 

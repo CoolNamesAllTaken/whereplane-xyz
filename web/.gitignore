@@ -2,3 +2,5 @@
 python/whereplane_web/staticfiles/
 python/whereplane_web/test.sqlite3
 **/__pycache__/
+.env
+secret/
