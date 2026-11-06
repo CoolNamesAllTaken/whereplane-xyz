@@ -1,0 +1,28 @@
+#!/bin/bash
+# pfb-drone: small-drone icon and Remote ID operator for tar1090 (drone.js). Runs after
+# 07-nginx-configure. nginx adds the script to index.html as it serves it (sub_filter on tar1090's
+# JS_ANCHOR3 comment, right after markers.js), so a tar1090 update (UPDATE_TAR1090) keeps it.
+# Never fails: no anchor, no file or a bad config only means drones keep tar1090's icon.
+js=/opt/pfb-drone/drone.js
+site=/etc/nginx/sites-enabled/tar1090
+snippet=/etc/nginx/pfb-drone.conf
+[ -f "$js" ] && [ -f "$site" ] || exit 0
+v=$(md5sum "$js" | cut -c1-8)
+cat > "$snippet" <<CONF
+location = /pfb-drone.js {
+  alias $js;
+  add_header Cache-Control "no-cache";
+}
+sub_filter '<!-- JS_ANCHOR3 -->' '<!-- JS_ANCHOR3 --><script src="pfb-drone.js?v=$v"></script>';
+sub_filter_once on;
+CONF
+if ! grep -q "include $snippet;" "$site"; then
+    cp -f "$site" /etc/nginx/tar1090.pfb-drone.bak
+    sed -i "s#^\(\s*\)include /etc/nginx/nginx-tar1090-webroot.conf;#\1include $snippet;\n&#" "$site"
+    if ! err=$(nginx -t 2>&1); then
+        echo "pfb-drone: nginx config rejected, left out: $err"
+        mv -f /etc/nginx/tar1090.pfb-drone.bak "$site"
+    fi
+    rm -f /etc/nginx/tar1090.pfb-drone.bak
+fi
+exit 0
