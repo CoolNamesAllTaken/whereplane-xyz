@@ -69,7 +69,10 @@ function draw(d) {
             plugins: [tooltipPlugin(el.dataset.unit, key === 'pos_s' ? 1 : 0)],
         };
         el.innerHTML = '';
-        if (!xs.length) { el.innerHTML = '<p class="muted" style="padding-top:3rem;text-align:center">○ No data yet</p>'; return; }
+        if (!xs.length || ys.every(v => v == null)) {
+            el.innerHTML = `<p class="muted" style="padding-top:3rem;text-align:center">${xs.length ? 'Not reported yet' : 'No data yet'}</p>`;
+            return;
+        }
         plots.push(new uPlot(opts, [xs, ys], el));
     });
 }

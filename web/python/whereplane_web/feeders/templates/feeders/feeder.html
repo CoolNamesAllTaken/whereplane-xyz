@@ -14,8 +14,8 @@
 
   <div class="figures">
     <div title="Current connection{% if f.connected_since %}, since {{ f.connected_since|date:'Y-m-d H:i' }} UTC{% endif %}"><div class="n">{{ uptime|default:'–' }}</div><div class="c">uptime</div></div>
-    <div title="Mode S messages per second"><div class="n num">{% if f.online %}{{ f.msgs_s|floatformat:0 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">messages</div></div>
-    <div title="Positions per second"><div class="n num">{% if f.online %}{{ f.pos_s|floatformat:1 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">positions</div></div>
+    <div title="Mode S messages per second"><div class="n num">{% if f.online and f.msgs_s is not None %}{{ f.msgs_s|floatformat:0 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">messages</div></div>
+    <div title="Positions per second"><div class="n num">{% if f.online and f.pos_s is not None %}{{ f.pos_s|floatformat:1 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">positions</div></div>
     <div title="Distinct aircraft in the last minute"><div class="n num">{% if f.online %}{{ f.aircraft_now }}{% else %}–{% endif %}</div><div class="c">aircraft now</div></div>
     <div title="Distinct aircraft today (UTC)"><div class="n num">{{ distinct_today }}</div><div class="c">aircraft today</div></div>
     <div title="Share of the chart window this feeder was online"><div class="n num" id="online-pct">–</div><div class="c">online</div></div>

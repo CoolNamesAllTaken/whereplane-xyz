@@ -4,10 +4,10 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.core.cache import cache
-from django.db.models import Count, ExpressionWrapper, F, IntegerField, Sum
+from django.db.models import Count, ExpressionWrapper, F, IntegerField, Q, Sum
 from django.utils import timezone
 
-from . import readsb
+from . import lists, readsb
 from .models import CoverageCell, Feeder, FeederDay, FeederSample, NetworkSample, Status
 
 WINDOWS = {'1h': timedelta(hours=1), '24h': timedelta(hours=24), '7d': timedelta(days=7), '30d': timedelta(days=30)}
@@ -19,8 +19,32 @@ def window_of(text: str | None, default=DEFAULT_WINDOW) -> str:
     return text if text in WINDOWS else default
 
 
+def rejected_uuids() -> list[str]:
+    """UUIDs readsbee rejected (its last 24 h): left off public pages, whatever was collected before."""
+    hit = cache.get('rejected')
+    if hit is None:
+        hit = [r['uuid'] for r in lists.readsbee_status()['rejected']]
+        cache.set('rejected', hit, 30)
+    return hit
+
+
+def readsbee_on() -> bool:
+    hit = cache.get('readsbee_on')
+    if hit is None:
+        hit = lists.readsbee_doc() is not None
+        cache.set('readsbee_on', hit, 30)
+    return hit
+
+
+def public_q():
+    """Who public pages may show: not hidden, not rejected by readsbee, and, while readsbee's status is there,
+    accepted by it at least once (so feeders collected before readsbee don't linger)."""
+    q = Q(hidden=False) & ~Q(uuid__in=rejected_uuids())
+    return q & Q(accepted=True) if readsbee_on() else q
+
+
 def public_feeders():
-    return Feeder.objects.filter(hidden=False)
+    return Feeder.objects.filter(public_q())
 
 
 def fresh() -> bool:
@@ -52,7 +76,8 @@ def coverage(window: str, feeder: Feeder | None = None, res: int = 1) -> dict:
     hit = cache.get(key)
     if hit is not None:
         return hit
-    qs = CoverageCell.objects.filter(last_seen__gte=timezone.now() - WINDOWS[window], feeder__hidden=False)
+    qs = CoverageCell.objects.filter(last_seen__gte=timezone.now() - WINDOWS[window],
+                                      feeder__in=public_feeders())
     if feeder:
         qs = qs.filter(feeder=feeder)
     if res > 1:
@@ -75,7 +100,7 @@ def coverage(window: str, feeder: Feeder | None = None, res: int = 1) -> dict:
 def cell_feeders(lat_i: int, lon_i: int, res: int, window: str) -> list[dict]:
     """Feeders that heard anything in one (merged) cell, with the bands each heard there."""
     qs = CoverageCell.objects.filter(
-        last_seen__gte=timezone.now() - WINDOWS[window], feeder__hidden=False,
+        last_seen__gte=timezone.now() - WINDOWS[window], feeder__in=public_feeders(),
         lat_i__gte=lat_i * res, lat_i__lt=(lat_i + 1) * res, lon_i__gte=lon_i * res, lon_i__lt=(lon_i + 1) * res)
     by: dict[int, set] = {}
     for fid, band in qs.values_list('feeder_id', 'band').distinct():

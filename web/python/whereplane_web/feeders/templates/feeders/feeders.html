@@ -11,10 +11,10 @@
     <table class="list">
       <thead><tr>
         <th>Feeder</th>
-        <th class="num" title="Mode S messages per second">msgs/s</th>
+        {% if rates %}<th class="num" title="Mode S messages per second">msgs/s</th>{% endif %}
         <th class="num" title="Distinct aircraft in the last minute">aircraft</th>
         <th class="num" title="Farthest range, any altitude, last 7 days">range</th>
-        <th class="hide-sm" aria-label="Messages per second, relative"></th>
+        {% if rates %}<th class="hide-sm" aria-label="Messages per second, relative"></th>{% endif %}
         <th class="num">last seen</th>
       </tr></thead>
       <tbody>
@@ -22,10 +22,10 @@
         <tr class="{% if not f.online %}off{% endif %}">
           <td class="name"><span class="status {% if f.online %}online{% else %}offline{% endif %}" title="{% if f.online %}Online{% else %}Offline{% endif %}"><span class="dot"></span>
             <a href="{% url 'feeder' f.uuid %}">{{ f.display_name }}</a></span><span class="id">{{ f.uuid }}</span></td>
-          <td class="num">{% if f.online %}{{ f.msgs_s|floatformat:0 }}{% else %}–{% endif %}</td>
+          {% if rates %}<td class="num">{% if f.online and f.msgs_s is not None %}{{ f.msgs_s|floatformat:0 }}{% else %}–{% endif %}</td>{% endif %}
           <td class="num">{% if f.online %}{{ f.aircraft_now }}{% else %}–{% endif %}</td>
           <td class="num">{% if f.max_km %}{{ f.max_km }} km{% else %}–{% endif %}</td>
-          <td class="hide-sm" style="width:22%"><span class="bar" data-v="{{ f.msgs_s|floatformat:'0u' }}"></span></td>
+          {% if rates %}<td class="hide-sm" style="width:22%"><span class="bar" data-v="{{ f.msgs_s|default_if_none:0|floatformat:'0u' }}"></span></td>{% endif %}
           <td class="num muted">{% if f.online %}now{% else %}{{ f.last_seen|timesince }} ago{% endif %}</td>
         </tr>
       {% empty %}

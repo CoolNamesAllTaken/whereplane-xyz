@@ -278,12 +278,12 @@ table.list td.name .id { display: block; font-family: var(--mono); font-size: .7
 /* ---- Staff ---- */
 .flash { padding: .5em .8em; border-radius: var(--pfb-radius-sm); margin: 1em 0 0; background: #EAF7EF; color: var(--pfb-green-dark); border: 1px solid #CDEFD9; }
 .flash.error { background: #FDECEA; color: #A12A1F; border-color: #F5C6C0; }
-.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(22em, 1fr)); gap: 1.2em; }
-.panel { border: 1px solid var(--line); border-radius: var(--pfb-radius); padding: 1em 1.1em; background: var(--surface); min-width: 0; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(22em, 100%), 1fr)); gap: 1.2em; }
+.panel { border: 1px solid var(--line); border-radius: var(--pfb-radius); padding: 1em 1.1em; background: var(--surface); min-width: 0; overflow-x: auto; }
 .panel h2 { font-size: 1.25em; margin-bottom: .2em; }
 .panel .path { font-family: var(--mono); font-size: .72em; color: var(--muted); font-weight: 400; }
 form.inline { display: flex; flex-wrap: wrap; gap: .4em; align-items: center; margin: 0; }
-input[type=text] { font: inherit; font-size: .9em; padding: .3em .5em; border: 1px solid var(--line); border-radius: var(--pfb-radius-sm); background: var(--bg); color: var(--ink); }
+input[type=text] { max-width: 100%; font: inherit; font-size: .9em; padding: .3em .5em; border: 1px solid var(--line); border-radius: var(--pfb-radius-sm); background: var(--bg); color: var(--ink); }
 input.uuid-in { font-family: var(--mono); font-size: .8em; width: 24em; max-width: 100%; }
 .btn-sm { padding: .25em .7em; font-size: .85em; font-weight: 600; }
 .btn-line { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }

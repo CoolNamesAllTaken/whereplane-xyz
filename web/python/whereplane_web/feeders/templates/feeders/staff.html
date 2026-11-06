@@ -5,7 +5,7 @@
   <div class="sec-head" style="padding-top:2.4em">
     <h1 class="page-title">Staff</h1>
     <span class="status {% if fresh %}online{% else %}offline{% endif %}" title="Collector{% if status.last_error %}: {{ status.last_error }}{% endif %}"><span class="dot"></span>collector{% if status.last_poll %}, {{ status.last_poll|timesince }} ago{% endif %}</span>
-    <span class="muted" title="Last poll round: HTTP requests to readsb, wall time">{{ status.requests }} requests, {{ status.poll_ms|floatformat:0 }} ms</span>
+    <span class="muted" title="Last poll round: HTTP requests to readsb, wall time">{{ status.requests }} requests, {{ status.poll_ms|floatformat:0 }} ms{% if status.source %}, feeders from {{ status.source }}{% endif %}</span>
     <a class="end" href="{% url 'admin:index' %}">Django admin</a>
   </div>
   {% if status.last_error %}<div class="flash error">⚠ {{ status.last_error }}</div>{% endif %}
@@ -57,7 +57,7 @@
             <input type="text" name="name" value="{{ f.name }}" placeholder="{{ f.display_name }}" maxlength="60" aria-label="Name">
             <label title="Hide from public pages and maps"><input type="checkbox" name="hidden" value="1"{% if f.hidden %} checked{% endif %}> hide</label>
             <button class="btn btn-sm btn-line">Save</button></form></td>
-          <td class="num">{{ f.msgs_s|floatformat:0 }}</td>
+          <td class="num">{% if f.msgs_s is not None %}{{ f.msgs_s|floatformat:0 }}{% else %}–{% endif %}</td>
           <td class="num muted">{% if f.online %}now{% else %}{{ f.last_seen|timesince }}{% endif %}</td>
         </tr>
       {% endfor %}

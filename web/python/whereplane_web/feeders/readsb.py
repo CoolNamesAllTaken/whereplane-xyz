@@ -119,11 +119,15 @@ def default_name(uuid: str) -> str:
 class ClientStats:
     uuid: str
     connections: int = 0
-    kbps: float = 0.0
-    conn_seconds: float = 0.0
-    msgs_s: float = 0.0
-    pos_s: float = 0.0
+    kbps: float | None = None
+    conn_seconds: float | None = None
+    msgs_s: float | None = None
+    pos_s: float | None = None
     extras: dict = field(default_factory=dict)
+
+    def add(self, name: str, value):
+        if isinstance(value, (int, float)):
+            setattr(self, name, (getattr(self, name) or 0.0) + value)
 
 
 def parse_clients(doc: dict) -> dict[str, ClientStats]:
@@ -150,10 +154,33 @@ def parse_clients(doc: dict) -> dict[str, ClientStats]:
             continue
         s = out.setdefault(uuid, ClientStats(uuid))
         s.connections += 1
-        s.kbps += get(row, 'avg. kbit/s')
-        s.conn_seconds = max(s.conn_seconds, get(row, 'conn time(s)'))
-        s.msgs_s += get(row, 'messages/s')
-        s.pos_s += get(row, 'positions/s')
+        s.add('kbps', get(row, 'avg. kbit/s'))
+        s.conn_seconds = max(s.conn_seconds or 0.0, get(row, 'conn time(s)'))
+        s.add('msgs_s', get(row, 'messages/s'))
+        s.add('pos_s', get(row, 'positions/s'))
+    return out
+
+
+def parse_readsbee(doc: dict) -> dict[str, ClientStats]:
+    """
+    Accepted feeders from readsbee.json (--net-uuid-status-dir): "receivers" holds one entry per connection with
+    its UUID and state; "ok" is accepted. readsbee decides who feeds; this site doesn't judge IDs. Rates are used
+    if readsbee reports them (messages_s, positions_s, kbps, conn_s); without them they stay None.
+    """
+    out: dict[str, ClientStats] = {}
+    for r in doc.get('receivers') or []:
+        if not isinstance(r, dict) or r.get('state') != 'ok':
+            continue
+        uuid = normalize_uuid(str(r.get('uuid') or ''))
+        if not uuid:
+            continue
+        s = out.setdefault(uuid, ClientStats(uuid))
+        s.connections += 1
+        s.add('msgs_s', r.get('messages_s'))
+        s.add('pos_s', r.get('positions_s'))
+        s.add('kbps', r.get('kbps'))
+        if isinstance(r.get('conn_s'), (int, float)):
+            s.conn_seconds = max(s.conn_seconds or 0.0, r['conn_s'])
     return out
 
 

@@ -1,8 +1,9 @@
 """
 The collector loop (management command `collect`). Reads the live readsb over HTTP, read-only:
 
-  every poll (10 s)  /data/clients.json, /data/stats.json, and per connected feeder
-                     /re-api/?all&filter_uuid=<uuid>: the aircraft it fed in the last ~2 s
+  every poll (10 s)  the accepted feeders from readsbee.json (WHEREPLANE_READSBEE_STATUS_FILE; without it,
+                     /data/clients.json, which readsbee's globe no longer serves), /data/stats.json, and per
+                     feeder /re-api/?all&filter_uuid=<uuid>: the aircraft it fed in the last ~2 s
   every minute       feeders' live state, coverage cells (upsert), Status
   every 5 minutes    FeederSample / NetworkSample rows, distinct aircraft per day
   every hour         range centers, pruning (samples 35 d, cells 31 d, days 40 d)
@@ -21,7 +22,7 @@ from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
 
-from . import readsb
+from . import lists, readsb
 from .models import CoverageCell, Feeder, FeederDay, FeederSample, NetworkSample, Status
 
 log = logging.getLogger('whereplane.collector')
@@ -54,6 +55,7 @@ class Collector:
         self.requests = 0
         self.poll_ms = 0.0
         self.error = ''
+        self.source = ''
 
     # ─── Reading readsb ────────────────────────────────────────────────────
     def poll(self):
@@ -61,7 +63,9 @@ class Collector:
         now = self.clock()
         today = timezone.now().date()
         self.requests = 0
-        self.clients = readsb.parse_clients(self._get('/data/clients.json'))
+        doc = lists.readsbee_doc()
+        self.source = 'readsbee' if doc is not None else 'clients.json'
+        self.clients = readsb.parse_readsbee(doc) if doc is not None else readsb.parse_clients(self._get('/data/clients.json'))
         self.stats = readsb.parse_stats(self._get('/data/stats.json'))
         for uuid in self.clients:
             try:
@@ -111,21 +115,26 @@ class Collector:
                 f = feeders.get(uuid)
                 if f is None:
                     f = feeders[uuid] = Feeder.objects.create(uuid=uuid, first_seen=now)
+                if c.conn_seconds is not None:
+                    f.connected_since = now - timedelta(seconds=c.conn_seconds)
+                elif not f.online or not f.connected_since:
+                    f.connected_since = now      # readsbee.json has no connection time: online since we saw it
                 f.online = True
+                f.accepted = f.accepted or self.source == 'readsbee'
                 f.last_seen = now
                 f.connections = c.connections
-                f.connected_since = now - timedelta(seconds=c.conn_seconds)
-                f.msgs_s, f.pos_s, f.kbps = round(c.msgs_s, 1), round(c.pos_s, 1), round(c.kbps, 1)
+                f.msgs_s, f.pos_s, f.kbps = (None if v is None else round(v, 1) for v in (c.msgs_s, c.pos_s, c.kbps))
                 f.aircraft_now = self.aircraft_now(uuid, now_s)
                 f.save()
             Feeder.objects.exclude(uuid__in=list(self.clients)).filter(online=True).update(
-                online=False, msgs_s=0, pos_s=0, kbps=0, aircraft_now=0, connections=0, connected_since=None)
+                online=False, msgs_s=None, pos_s=None, kbps=None, aircraft_now=0, connections=0, connected_since=None)
             self.flush_cells(feeders, now)
             st = Status.get()
             st.last_poll = now
             st.last_error = self.error[:300]
             st.poll_ms = round(self.poll_ms, 1)
             st.requests = self.requests
+            st.source = self.source
             st.aircraft = self.stats.get('aircraft', 0)
             st.msgs_s = self.stats.get('msgs_s', 0)
             st.pos_s = self.stats.get('pos_s', 0)

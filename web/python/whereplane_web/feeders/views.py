@@ -51,13 +51,12 @@ def feeder_list(request):
         f.max_km = ranges.get(f.pk)
     return render(request, 'feeders/feeders.html', {
         'nav': 'feeders', 'feeders': feeders, 'live': queries.live(),
+        'rates': any(f.online and f.msgs_s is not None for f in feeders),
         'online': sum(f.online for f in feeders)})
 
 
 def _public_feeder(uuid):
-    f = get_object_or_404(Feeder, uuid=(uuid or '').lower())
-    if f.hidden:
-        raise Http404
+    f = get_object_or_404(Feeder, queries.public_q(), uuid=(uuid or '').lower())
     return f
 
 

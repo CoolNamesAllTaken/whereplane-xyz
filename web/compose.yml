@@ -43,7 +43,8 @@ services:
       - WHEREPLANE_FEEDERS_DIR=/srv/feeders
       - WHEREPLANE_READSBEE_STATUS_FILE=/readsbee-status/readsbee.json
     volumes:
-      # readsbee's --net-uuid-status-dir (readsbee.json: rejected and flagged feeders), read-only. Staff page only.
+      # readsbee's --net-uuid-status-dir (globe's READSBEE_STATUS_DIR), read-only: rejected and flagged feeders
+      # for the staff page.
       - ${WHEREPLANE_READSBEE_STATUS_DIR:-/opt/readsbee-status}:/readsbee-status:ro
       # The folder readsbee reads (mount the folder, not the files: writes are atomic renames).
       - ${WHEREPLANE_FEEDERS_DIR:-../feeders}:/srv/feeders
@@ -67,6 +68,10 @@ services:
       - WHEREPLANE_ROLE=worker
       - WHEREPLANE_READSB_URL=${WHEREPLANE_READSB_URL:-http://host.docker.internal:80}
       - WHEREPLANE_POLL_SECONDS=${WHEREPLANE_POLL_SECONDS:-10}
+      - WHEREPLANE_READSBEE_STATUS_FILE=/readsbee-status/readsbee.json
+    volumes:
+      # the accepted feeders come from readsbee.json (globe no longer serves clients.json)
+      - ${WHEREPLANE_READSBEE_STATUS_DIR:-/opt/readsbee-status}:/readsbee-status:ro
     extra_hosts:
       - host.docker.internal:host-gateway   # globe publishes :80 on the host
     networks: [default, backend]

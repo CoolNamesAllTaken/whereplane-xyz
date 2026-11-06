@@ -363,3 +363,75 @@ def test_readsbee_json(settings, tmp_path):
     assert (r['uuid'], r['reason'], r['code'], r['count']) == (OTHER, 'policy', 2, 3)
     assert r['last_seen'].timestamp() == 1793919000
     assert got['flagged'] == [{'uuid': BEE, 'reason': 'reuse', 'sources': 3}]
+
+
+# ─── Feeders from readsbee.json (readsbee's globe hides clients.json) ─────
+READSBEE = {
+    'now': 1793935708.2, 'filter': {'active': True},
+    'rejected': [{'uuid': OTHER, 'reason': 'policy', 'code': 1, 'open': 1, 'connections': 1, 'first': 1, 'last': 2}],
+    'receivers': [
+        {'uuid': BEE, 'state': 'ok', 'code': 0, 'sources': 1, 'flagged': False, 'dropped': 0, 'ext': {}, 'ee': {}},
+        {'uuid': BEE, 'state': 'ok', 'code': 0, 'sources': 1, 'flagged': False, 'dropped': 0},
+        {'uuid': OTHER, 'state': 'rejected', 'code': 1, 'sources': 0, 'flagged': False, 'dropped': 9},
+        {'uuid': None, 'state': 'pending', 'code': 0, 'sources': 0, 'flagged': False, 'dropped': 96},
+    ],
+}
+
+
+def no_clients_fetch(path):
+    if path == '/data/clients.json':
+        raise AssertionError('clients.json must not be read when readsbee.json is there')
+    return fake_fetch(path)
+
+
+def test_parse_readsbee_accepted_only():
+    got = readsb.parse_readsbee(READSBEE)
+    assert set(got) == {BEE}
+    assert got[BEE].connections == 2 and got[BEE].msgs_s is None and got[BEE].conn_seconds is None
+    rated = {'receivers': [{'uuid': BEE, 'state': 'ok', 'messages_s': 10.5, 'positions_s': 2, 'conn_s': 60},
+                           {'uuid': BEE, 'state': 'ok', 'messages_s': 1}]}
+    s = readsb.parse_readsbee(rated)[BEE]
+    assert (s.msgs_s, s.pos_s, s.conn_seconds) == (11.5, 2, 60)
+
+
+@pytest.mark.django_db
+def test_collector_reads_readsbee_json(settings, tmp_path, client):
+    p = tmp_path / 'readsbee.json'
+    p.write_text(json.dumps(READSBEE))
+    settings.WHEREPLANE_READSBEE_STATUS_FILE = str(p)
+    t = [1000.0]
+    c = Collector(no_clients_fetch, clock=lambda: t[0])
+    c.step()
+    assert list(Feeder.objects.values_list('uuid', flat=True)) == [BEE]
+    bee = Feeder.objects.get(uuid=BEE)
+    assert bee.accepted
+    assert bee.online and bee.msgs_s is None and bee.aircraft_now == 5 and bee.connected_since
+    since = bee.connected_since
+    t[0] += 61
+    c.step()
+    bee.refresh_from_db()
+    assert bee.connected_since == since                       # uptime runs from when we first saw it online
+    assert Status.get().source == 'readsbee'
+    assert CoverageCell.objects.filter(feeder=bee).exists()
+    html = client.get(f'/feeder/{BEE}/').content.decode()
+    assert 'None' not in html
+    assert client.get(f'/api/feeder/{BEE}/series.json').json()['msgs_s'] == [None]
+    assert '>msgs/s</th>' not in client.get('/feeders/').content.decode()   # no rates reported: no rate column
+
+
+@pytest.mark.django_db
+def test_rejected_by_readsbee_left_off_public_pages(settings, tmp_path, client, collected):
+    p = tmp_path / 'readsbee.json'
+    p.write_text(json.dumps(READSBEE))                      # rejects OTHER
+    settings.WHEREPLANE_READSBEE_STATUS_FILE = str(p)
+    cache.clear()
+    assert OTHER not in client.get('/feeders/').content.decode()
+    assert client.get(f'/feeder/{OTHER}/').status_code == 404
+    la, lo = readsb.cell_of(21.3, -157.9)
+    assert client.get(f'/api/cell.json?la={la}&lo={lo}&res=1').json()['feeders'] == []
+    assert all(not (r[0] == la and r[1] == lo) for r in client.get('/api/coverage.json?res=1').json()['cells'])
+    # with readsbee's status there, only feeders it accepted at least once are public
+    assert client.get(f'/feeder/{BEE}/').status_code == 404
+    Feeder.objects.filter(uuid=BEE).update(accepted=True)
+    assert client.get(f'/feeder/{BEE}/').status_code == 200
+    assert BEE in client.get('/feeders/').content.decode()

@@ -87,6 +87,18 @@ def _from_readsbee(doc: dict) -> dict:
     return out
 
 
+def readsbee_doc() -> dict | None:
+    """readsbee.json as readsbee wrote it, or None if there is none (not mounted, unreadable, not readsbee's format)."""
+    path = settings.WHEREPLANE_READSBEE_STATUS_FILE
+    if not path:
+        return None
+    try:
+        doc = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return None
+    return doc if isinstance(doc, dict) and isinstance(doc.get('receivers'), list) else None
+
+
 def readsbee_status() -> dict:
     """
     What readsbee decided about feeders (staff only), from WHEREPLANE_READSBEE_STATUS_FILE: readsbee.json as
