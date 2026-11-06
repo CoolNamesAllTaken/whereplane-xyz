@@ -9,8 +9,12 @@ that filters Beast feeds by feeder UUID. Loopback (mlathub) is exempt.
 - Policy: `${FEEDER_POLICY_DIR:-/home/bird/feeder-policy}` (`policy.so`, `readsbee.conf`), built from
   the private PantsForBirds/internal repo. globe won't start without it.
 - `feeders/allow.txt`: extra UUIDs allowed. `feeders/deny.txt`: UUIDs blocked.
-  One per line, `#` comments, picked up within 2 s.
-- Status for staff: `docker exec globe cat /run/readsbee/readsbee.json` (no IPs, not on the web).
+  One per line, `#` comments, picked up within 2 s. Not in git: the website's staff page (`web/`) writes
+  them. Create them once from the examples (a missing list counts as empty):
+  `for f in allow deny; do cp -n feeders/$f.txt.example feeders/$f.txt; done`
+- Status for staff: `readsbee.json` in `${READSBEE_STATUS_DIR:-/opt/readsbee-status}` on the host (no IPs,
+  not served by globe). The website (`web/`) mounts it read-only: its feeder list and its staff page.
+- Website: `web/` (its own compose project, see `web/README.md`).
 - `/data/clients.json` (feeder IPs) returns 404 (`nginx/08-private-data`).
 
 ### Rollback

@@ -48,6 +48,9 @@ services:
       - ${FEEDER_POLICY_DIR:-/home/bird/feeder-policy}:/policy:ro
       # allowed / blocked feeder UUIDs, reloaded on change (no restart)
       - ./feeders:/feeders:ro
+      # readsbee.json (--net-uuid-status-dir): accepted, rejected and flagged feeders, no addresses. On the host so
+      # the web stack (web/) can read it; it mounts the same folder read-only.
+      - ${READSBEE_STATUS_DIR:-/opt/readsbee-status}:/run/readsbee
       # no feeder IPs on the web: hide /data/clients.json
       - ./nginx/08-private-data:/etc/s6-overlay/startup.d/08-private-data:ro
       # pfb-tiles: proxy /pfb-tiles/ to the service below (07-pfb-tiles adds it to tar1090's nginx site)

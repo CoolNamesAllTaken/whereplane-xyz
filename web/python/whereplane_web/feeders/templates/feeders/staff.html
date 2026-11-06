@@ -1,0 +1,68 @@
+{% extends "feeders/base.html" %}
+{% block title %}Staff · whereplane.xyz{% endblock %}
+{% block main %}
+<div class="wrap">
+  <div class="sec-head" style="padding-top:2.4em">
+    <h1 class="page-title">Staff</h1>
+    <span class="status {% if fresh %}online{% else %}offline{% endif %}" title="Collector{% if status.last_error %}: {{ status.last_error }}{% endif %}"><span class="dot"></span>collector{% if status.last_poll %}, {{ status.last_poll|timesince }} ago{% endif %}</span>
+    <span class="muted" title="Last poll round: HTTP requests to readsb, wall time">{{ status.requests }} requests, {{ status.poll_ms|floatformat:0 }} ms{% if status.source %}, feeders from {{ status.source }}{% endif %}</span>
+    <a class="end" href="{% url 'admin:index' %}">Django admin</a>
+  </div>
+  {% if status.last_error %}<div class="flash error">⚠ {{ status.last_error }}</div>{% endif %}
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Allow <span class="path">{{ feeders_dir }}/allow.txt</span></h2>
+      <p class="muted" style="margin:.1em 0 .6em">readsbee always accepts these.</p>
+      {% include "feeders/_list.html" with entries=allow kind="allow" %}
+    </div>
+    <div class="panel">
+      <h2>Deny <span class="path">{{ feeders_dir }}/deny.txt</span></h2>
+      <p class="muted" style="margin:.1em 0 .6em">readsbee always refuses these.</p>
+      {% include "feeders/_list.html" with entries=deny kind="deny" %}
+    </div>
+  </div>
+
+  <div class="grid-2 block" style="padding-top:1.2em">
+    <div class="panel">
+      <h2>Rejected <span class="path">by readsbee, 24 h</span></h2>
+      {% if rejected %}
+      <table class="list"><thead><tr><th>UUID</th><th>reason</th><th class="num">conn.</th><th class="num">last</th><th></th></tr></thead><tbody>
+      {% for r in rejected %}<tr><td class="mono">{{ r.uuid }}</td><td>{{ r.reason|default:'' }}{% if r.code %} ({{ r.code }}){% endif %}</td><td class="num">{{ r.count|default:'' }}</td>
+        <td class="num muted">{% if r.last_seen %}{{ r.last_seen|timesince }}{% endif %}</td>
+        <td class="num">{% if r.allowed %}<span class="tag ok">✓ allowed</span>{% elif r.denied %}<span class="tag">✗ denied</span>{% else %}
+          <form class="inline" method="post" action="{% url 'staff_list_add' %}">{% csrf_token %}<input type="hidden" name="uuid" value="{{ r.uuid }}">
+          <button class="btn btn-sm btn-line" name="kind" value="allow" title="Add to allow.txt">✓ Allow</button><button class="btn btn-sm btn-red" name="kind" value="deny" title="Add to deny.txt">✗ Deny</button></form>{% endif %}</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}<p class="muted">{% if status_missing %}No readsbee status at <code>{{ status_file }}</code>{% else %}None{% endif %}</p>{% endif %}
+    </div>
+    <div class="panel">
+      <h2>Flagged <span class="path">by readsbee, connected now</span></h2>
+      {% if flagged %}
+      <table class="list"><thead><tr><th>UUID</th><th>reason</th><th class="num" title="Source addresses at once">sources</th></tr></thead><tbody>
+      {% for r in flagged %}<tr><td class="mono"><a class="plain" href="{% url 'feeder' r.uuid %}">{{ r.uuid }}</a></td><td>{{ r.reason|default:'' }}</td><td class="num">{{ r.sources|default:'' }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}<p class="muted">None</p>{% endif %}
+    </div>
+  </div>
+
+  <section class="block" style="padding-top:2em">
+    <div class="sec-head"><h2 class="sec sec-small">Feeders</h2><span class="muted">public name, hide from public pages</span></div>
+    <div class="table-box">
+      <table class="list"><thead><tr><th>UUID</th><th>name</th><th class="num">msgs/s</th><th class="num">last seen</th></tr></thead><tbody>
+      {% for f in feeders %}
+        <tr class="{% if not f.online %}off{% endif %}">
+          <td><span class="status {% if f.online %}online{% else %}offline{% endif %}"><span class="dot"></span><a class="mono plain" href="{% url 'feeder' f.uuid %}">{{ f.uuid }}</a></span>{% if f.flag %} <span class="tag warn" title="Flagged by readsbee">⚠ {{ f.flag }}</span>{% endif %}{% if f.hidden %} <span class="tag">hidden</span>{% endif %}</td>
+          <td><form class="inline" method="post" action="{% url 'staff_feeder' f.pk %}">{% csrf_token %}
+            <input type="text" name="name" value="{{ f.name }}" placeholder="{{ f.display_name }}" maxlength="60" aria-label="Name">
+            <label title="Hide from public pages and maps"><input type="checkbox" name="hidden" value="1"{% if f.hidden %} checked{% endif %}> hide</label>
+            <button class="btn btn-sm btn-line">Save</button></form></td>
+          <td class="num">{% if f.msgs_s is not None %}{{ f.msgs_s|floatformat:0 }}{% else %}–{% endif %}</td>
+          <td class="num muted">{% if f.online %}now{% else %}{{ f.last_seen|timesince }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody></table>
+    </div>
+  </section>
+</div>
+{% endblock %}

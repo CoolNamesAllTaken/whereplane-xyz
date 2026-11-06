@@ -1,0 +1,67 @@
+{% extends "feeders/base.html" %}
+{% load static %}
+{% block title %}{{ f.display_name }} · whereplane.xyz{% endblock %}
+{% block head %}{% include "feeders/_map_head.html" %}
+<link rel="stylesheet" href="{% static 'feeders/vendor/uplot/uPlot.min.css' %}">{% endblock %}
+{% block main %}
+<div class="wrap">
+  <div class="feeder-head">
+    <h1>{{ f.display_name }}</h1>
+    <span class="status {% if f.online %}online{% else %}offline{% endif %}"><span class="dot"></span>{% if f.online %}online{% else %}offline{% endif %}</span>
+    <span class="uuid">{{ f.uuid }} <button type="button" class="copy" data-copy="{{ f.uuid }}" title="Copy" aria-label="Copy"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg></button></span>
+    <div class="btns"><a class="btn btn-green" href="{{ globe_url }}/?feed={{ f.uuid }}" title="This feeder's aircraft on the globe">Live traffic</a></div>
+  </div>
+
+  <div class="figures">
+    <div title="Current connection{% if f.connected_since %}, since {{ f.connected_since|date:'Y-m-d H:i' }} UTC{% endif %}"><div class="n">{{ uptime|default:'–' }}</div><div class="c">uptime</div></div>
+    <div title="Mode S messages per second"><div class="n num">{% if f.online and f.msgs_s is not None %}{{ f.msgs_s|floatformat:0 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">messages</div></div>
+    <div title="Positions per second"><div class="n num">{% if f.online and f.pos_s is not None %}{{ f.pos_s|floatformat:1 }}<small>/s</small>{% else %}–{% endif %}</div><div class="c">positions</div></div>
+    <div title="Distinct aircraft in the last minute"><div class="n num">{% if f.online %}{{ f.aircraft_now }}{% else %}–{% endif %}</div><div class="c">aircraft now</div></div>
+    <div title="Distinct aircraft today (UTC)"><div class="n num">{{ distinct_today }}</div><div class="c">aircraft today</div></div>
+    <div title="Share of the chart window this feeder was online"><div class="n num" id="online-pct">–</div><div class="c">online</div></div>
+    <div class="later" title="ADS-L aircraft, Remote ID drones and UAT (978 MHz) aircraft: coming with readsbee"><div class="n">– · – · –</div><div class="c">ADS-L · RID · UAT</div></div>
+  </div>
+
+  <section class="block">
+    <div class="sec-head"><h2 class="sec sec-small">History</h2>
+      <div class="seg end" id="series-windows" role="group" aria-label="Window">{% for w in windows %}{% if w != '1h' %}<button type="button" class="{% if w == series_window %}on{% endif %}" data-window="{{ w }}">{{ w }}</button>{% endif %}{% endfor %}</div>
+    </div>
+    <div class="charts" id="charts" data-api="{% url 'api_feeder_series' f.uuid %}" data-window="{{ series_window }}">
+      <div class="chart-box"><h3>Messages/s <span class="now" data-now="msgs_s"></span></h3><div class="chart" data-series="msgs_s" data-unit="/s"></div></div>
+      <div class="chart-box"><h3>Positions/s <span class="now" data-now="pos_s"></span></h3><div class="chart" data-series="pos_s" data-unit="/s"></div></div>
+      <div class="chart-box"><h3>Aircraft <span class="now" data-now="aircraft"></span></h3><div class="chart" data-series="aircraft" data-unit=""></div></div>
+      <div class="chart-box"><h3>Distinct aircraft per day</h3><div class="chart" data-series="days" data-unit=" aircraft"></div></div>
+    </div>
+  </section>
+
+  <section class="block two">
+    <div>
+      <div class="sec-head"><h2 class="sec sec-small">Range</h2><span class="muted" title="From the middle of its low-altitude coverage, last 7 days">last 7 days</span></div>
+      <div class="table-box">
+        <table class="list ranges">
+          <thead><tr><th>altitude</th><th></th><th class="num" title="Median distance">typical</th><th class="num" title="98th percentile distance">farthest</th></tr></thead>
+          <tbody>
+          {% for r in ranges %}
+            <tr>
+              <td title="{{ r.tip }}"><span class="sw band-sw" data-mid="{{ r.mid_ft }}" data-band="{{ r.i }}"></span> {{ r.label }} ft</td>
+              <td class="bars">{% if r.range %}<div class="rbar" data-band="{{ r.i }}"><span class="max" style="width:{% widthratio r.range.max_km range_top 100 %}%"></span><span class="typ" style="width:{% widthratio r.range.typical_km range_top 100 %}%"></span></div>{% endif %}</td>
+              <td class="num">{% if r.range %}{{ r.range.typical_km }} km{% else %}–{% endif %}</td>
+              <td class="num">{% if r.range %}{{ r.range.max_km }} km{% else %}–{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="sec-head"><h2 class="sec sec-small">Coverage</h2></div>
+      {% include "feeders/_map.html" with mode="feeder" feeder_uuid=f.uuid %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'feeders/vendor/uplot/uPlot.iife.min.js' %}"></script>
+<script type="module" src="{% static 'feeders/js/coverage_map.js' %}"></script>
+<script type="module" src="{% static 'feeders/js/feeder.js' %}"></script>
+{% endblock %}

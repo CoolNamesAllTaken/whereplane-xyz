@@ -1,0 +1,11 @@
+{% extends "feeders/base.html" %}
+{% load static %}
+{% block title %}Coverage · whereplane.xyz{% endblock %}
+{% block head %}{% include "feeders/_map_head.html" %}{% endblock %}
+{% block main %}
+<section class="block wrap" style="padding-top:2.4em">
+  <div class="sec-head"><h1 class="page-title">Coverage</h1><p class="sub" title="A cell lights up when a feeder heard an aircraft's own ADS-B position there, in that altitude band">Heard positions by altitude. Click a cell for its feeders.</p></div>
+  {% include "feeders/_map.html" with mode="full" %}
+</section>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'feeders/js/coverage_map.js' %}"></script>{% endblock %}

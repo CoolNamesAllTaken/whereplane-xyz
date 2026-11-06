@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% load static %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{% block title %}whereplane.xyz{% endblock %}</title>
+<meta name="description" content="{% block description %}A live map fed by ADSBee receivers. Point your bee at feed.whereplane.xyz:30004.{% endblock %}">
+<script src="{% static 'feeders/js/theme.js' %}"></script>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{% static 'feeders/webfonts/SourceSans3-Variable.woff2' %}">
+<link rel="stylesheet" href="{% static 'feeders/css/site.css' %}">
+<link rel="icon" type="image/svg+xml" href="{% static 'feeders/img/logo.svg' %}">
+{% block head %}{% endblock %}
+</head>
+<body data-traffic-api="{{ globe_url }}/re-api/" data-traffic-tiles="{{ globe_url }}/pfb-tiles/v2/{z}/{x}/{y}.pbf">
+<header class="site-header" id="masthead">
+  <div class="wrap">
+    <a class="brand" href="{% url 'home' %}"><img src="{% static 'feeders/img/logo.svg' %}" alt="" width="28" height="28"><span>whereplane<span class="tld">.xyz</span></span></a>
+    <nav class="nav" aria-label="Site">
+      <a href="{% url 'coverage' %}"{% if nav == 'map' %} aria-current="page"{% endif %}>Coverage</a>
+      <a href="{% url 'feeders' %}"{% if nav == 'feeders' %} aria-current="page"{% endif %}>Feeders</a>
+      <a href="{{ globe_url }}/">Live globe</a>
+      <a href="{% url 'home' %}#feed"{% if nav == 'feed' %} aria-current="page"{% endif %}>Feed</a>
+      {% if user.is_superuser %}<a href="{% url 'staff' %}"{% if nav == 'staff' %} aria-current="page"{% endif %}>Staff</a>{% endif %}
+      <button type="button" class="theme-btn" title="Light or dark" aria-label="Light or dark" onclick="setTheme(document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark')">
+        <svg class="sun" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.5V3M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.06 1.06M11.54 11.54l1.06 1.06M3.4 12.6l1.06-1.06M11.54 4.46l1.06-1.06"/></svg>
+        <svg class="moon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+<main>
+{% if messages %}<div class="wrap">{% for m in messages %}<div class="flash {{ m.level_tag }}">{{ m }}</div>{% endfor %}</div>{% endif %}
+{% block main %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <span>whereplane.xyz, a <a href="https://pantsforbirds.com">Pants for Birds</a> project for <a href="https://pantsforbirds.com/adsbee-1090/">ADSBee</a> owners</span>
+    <span>Built on <a href="https://github.com/wiedehopf/readsb">readsb</a> and <a href="https://github.com/wiedehopf/tar1090">tar1090</a></span>
+  </div>
+  <p class="pfb-traffic-credit">Map © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, <a href="https://openmaptiles.org/">OpenMapTiles</a></p>
+</footer>
+<script src="{% static 'feeders/js/site-traffic.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

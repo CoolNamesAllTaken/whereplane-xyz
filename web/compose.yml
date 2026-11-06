@@ -1,0 +1,101 @@
+name: whereplane-web # prefix for container and volume names; separate from the globe stack
+
+# whereplane.xyz: the website (Django) and its collector, behind Caddy.
+# Reads the live readsb in the `globe` container over HTTP, read-only. See README.md.
+services:
+  # Front door. Plain HTTP: TLS terminates at the birdbox nginx, like adsbee.aero.
+  web:
+    image: caddy:2.10.2
+    restart: always
+    ports:
+      # Default: loopback only. Production: the LAN address the birdbox nginx connects to
+      # (it lives on another host), with WHEREPLANE_TRUSTED_PROXIES set to birdbox's address.
+      - ${WHEREPLANE_HTTP_BIND:-127.0.0.1}:${WHEREPLANE_HTTP_PORT:-8190}:80
+    environment:
+      - WHEREPLANE_TRUSTED_PROXIES=${WHEREPLANE_TRUSTED_PROXIES:-172.16.0.0/12}
+    volumes:
+      - ./caddy:/etc/caddy:ro
+    networks: [default, backend]
+
+  db:
+    image: postgres:16.10
+    restart: always
+    env_file:
+      - path: .env.whereplane
+        required: false
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Django: pages, JSON for the maps and charts, /staff/ and /admin/. Writes allow.txt / deny.txt.
+  site:
+    build: {context: python, target: prod}
+    restart: always
+    env_file:
+      - path: .env.whereplane
+        required: false
+    environment:
+      - WHEREPLANE_FEEDERS_DIR=/srv/feeders
+      - WHEREPLANE_READSBEE_STATUS_FILE=/readsbee-status/readsbee.json
+    volumes:
+      # readsbee's --net-uuid-status-dir (globe's READSBEE_STATUS_DIR), read-only: rejected and flagged feeders
+      # for the staff page.
+      - ${WHEREPLANE_READSBEE_STATUS_DIR:-/opt/readsbee-status}:/readsbee-status:ro
+      # The folder readsbee reads (mount the folder, not the files: writes are atomic renames).
+      - ${WHEREPLANE_FEEDERS_DIR:-../feeders}:/srv/feeders
+    networks: [backend]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Polls the live readsb every WHEREPLANE_POLL_SECONDS (feeders/collector.py). Same image as site.
+  collector:
+    build: {context: python, target: prod}
+    restart: always
+    env_file:
+      - path: .env.whereplane
+        required: false
+    environment:
+      - WHEREPLANE_ROLE=worker
+      - WHEREPLANE_READSB_URL=${WHEREPLANE_READSB_URL:-http://host.docker.internal:80}
+      - WHEREPLANE_POLL_SECONDS=${WHEREPLANE_POLL_SECONDS:-10}
+      - WHEREPLANE_READSBEE_STATUS_FILE=/readsbee-status/readsbee.json
+    volumes:
+      # the accepted feeders come from readsbee.json (globe no longer serves clients.json)
+      - ${WHEREPLANE_READSBEE_STATUS_DIR:-/opt/readsbee-status}:/readsbee-status:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway   # globe publishes :80 on the host
+    networks: [default, backend]
+    depends_on:
+      db: {condition: service_healthy}
+      site: {condition: service_healthy}
+    command: python manage.py collect
+
+  # Tests against a throwaway Postgres database: docker compose --profile test run --rm --build site-test
+  site-test:
+    profiles: [test]
+    build: {context: python, target: test}
+    env_file:
+      - path: .env.whereplane
+        required: false
+    environment:
+      - POSTGRES_TEST_HOST=db
+    networks: [backend]
+    depends_on:
+      db: {condition: service_healthy}
+
+networks:
+  backend:
+    internal: true
+
+volumes:
+  db:      # feeders, samples, coverage: back up (or accept losing history)

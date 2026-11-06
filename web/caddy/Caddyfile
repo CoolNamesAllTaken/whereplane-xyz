@@ -1,0 +1,26 @@
+# Plain HTTP. In production TLS terminates at the birdbox nginx (like adsbee.aero), which forwards
+# here over the docker bridge gateway. Only that proxy is believed about the visitor's address.
+{
+	servers {
+		trusted_proxies static {$WHEREPLANE_TRUSTED_PROXIES:172.16.0.0/12}
+		trusted_proxies_strict
+	}
+}
+
+# http:// disables automatic HTTPS: no certificates, no :443.
+http://:80 {
+	encode zstd gzip
+
+	@noindex path /admin* /staff*
+	header @noindex X-Robots-Tag "noindex, nofollow"
+
+	# Everything else is the Django site, static files included (whitenoise).
+	handle {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy site:8000 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+}
