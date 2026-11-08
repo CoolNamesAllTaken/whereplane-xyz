@@ -3,14 +3,16 @@
  * positions, per altitude band, over whereplane's own vector tiles (pfb-tiles v2: water, rivers, major roads,
  * borders; z0-z9) drawn faint, as pantsforbirds.com's live traffic map does.
  *
- * 3D: each band is a slab stacked at its own height (equal thickness, not to scale), so every
- * altitude shows at once; tilt and turn with right-drag or two fingers. 2D: each cell colored by
+ * 3D: each band is a slab from its true bottom to its true top altitude, heights times one factor for the
+ * page (coverage_shapes.js, as adsbee.aero's swarm range map; the chip under the 3D button shows it),
+ * distances to scale; tilt and turn with right-drag or two fingers. 2D: each cell colored by
  * the lowest shown band heard there. Band colors: tar1090's altitude colors (colors.js, --band-* in site.css).
  * Hover: band and feeder count. Click: the feeders that heard that cell (/api/cell.json).
  * Data: /api/coverage.json, refreshed every 2 minutes.
  */
 import * as maplibregl from 'maplibre-gl';
 import {bandColor} from 'wp/colors';
+import {slabs} from 'wp/coverage_shapes';
 
 const root = document.getElementById('coverage');
 const mode = root.dataset.mode;                      // full | preview | feeder
@@ -24,7 +26,7 @@ const esc = t => String(t).replace(/[&<>"]/g, c => `&#${c.charCodeAt(0)};`);
 
 maplibregl.setWorkerUrl(new URL(root.dataset.worker, location.href).href);
 
-let data = null, bands = [], colors = [];
+let data = null, bands = [], colors = [], heights = [], factor = 1;
 let shown = new Set();            // visible band indexes
 let tilted = mode !== 'preview';
 const PITCH = root.clientWidth < 600 ? 50 : 55;
@@ -85,15 +87,18 @@ function cellRing(la, lo) {
     const s = la * step - 90, w = lo * step - 180, n = s + step, e = w + step;
     return [[w, s], [e, s], [e, n], [w, n], [w, s]];
 }
-function slab(band) {
-    // Equal thickness per band, scaled to the cell size so slabs look like stacked tiles.
-    const h = data.cell_deg * 111000 * (res === 1 ? 0.45 : 0.4);
-    return [band * h, band * h + 0.8 * h];
+// No feeder range known yet (no feeder located): half the coverage's narrower side instead.
+function extentRangeM() {
+    if (!data.cells.length) { return 0; }
+    const [[w, s], [e, n]] = bulkBounds(true);
+    return Math.min((e - w) * Math.cos((s + n) / 360 * Math.PI), n - s) * 111320 / 2;
 }
 
 function buildFeatures() {
+    ({factor, heights} = slabs(data, extentRangeM()));
+    showFactor();
     const features = data.cells.map(([la, lo, band, n, hits], i) => {
-        const [base, top] = slab(band);
+        const [base, top] = heights[band];
         return {type: 'Feature', id: i, geometry: {type: 'Polygon', coordinates: [cellRing(la, lo)]},
                 properties: {la, lo, band, n, hits, base, top, color: colors[band]}};
     });
@@ -144,6 +149,7 @@ const queryLayers = () => (tilted ? bands.map((_b, i) => `band-${i}`).filter(id 
 function applyVisibility() {
     bands.forEach((_b, i) => map.setLayoutProperty(`band-${i}`, 'visibility', tilted && shown.has(i) ? 'visible' : 'none'));
     map.setLayoutProperty('flat', 'visibility', tilted ? 'none' : 'visible');
+    showFactor();
     document.querySelectorAll('#band-chips [data-band]').forEach(c => c.setAttribute('aria-pressed', String(shown.has(Number(c.dataset.band)))));
     buildFlat();
 }
@@ -241,11 +247,19 @@ if (mode !== 'preview') {
     tiltBtn.classList.toggle('on', tilted);
     mk('⤢', 'Fit everything', () => fit(true, true));
     map.addControl({onAdd: () => group, onRemove() {}}, 'top-right');
-    const note = document.createElement('div');
-    note.className = 'map-note';
-    note.textContent = 'Bands stacked, heights not to scale';
-    note.title = 'Each altitude band is a slab at its own height; slab heights are not to scale, distances are';
-    root.appendChild(note);
+    const chip = document.createElement('div');
+    chip.className = 'maplibregl-ctrl map-factor';
+    chip.id = 'map-factor';
+    map.addControl({onAdd: () => chip, onRemove() {}}, 'top-right');
+}
+// The height factor next to the 3D button, shown only in 3D.
+function showFactor() {
+    const chip = document.getElementById('map-factor');
+    if (!chip) { return; }
+    chip.hidden = !tilted;
+    chip.textContent = `↕ ×${factor}`;
+    chip.title = factor > 1 ? `Heights ×${factor} so altitude differences are readable; distances to scale`
+                            : 'Heights and distances to scale';
 }
 
 // ─── Hover and click ────────────────────────────────────────────────────────
@@ -263,7 +277,7 @@ function showTip(e, f) {
     setHover(f);
     map.getCanvas().style.cursor = 'pointer';
     const p = f.properties, b = bands[p.band];
-    tip.innerHTML = `<span class="sw" style="background:${p.color}"></span>${esc(b.label)} ft · ${p.n} feeder${p.n === 1 ? '' : 's'}`;
+    tip.innerHTML = `<span class="sw" style="background:${p.color}"></span>${esc(b.tip)} · ${p.n} feeder${p.n === 1 ? '' : 's'}`;
     const box = root.getBoundingClientRect();
     tip.hidden = false;
     tip.style.left = `${Math.max(8, Math.min(e.point.x + 14, box.width - tip.offsetWidth - 8))}px`;

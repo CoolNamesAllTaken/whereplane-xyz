@@ -122,3 +122,7 @@ stations is not used, so every zoom overzooms z9).
 
 Vendored, no CDN: MapLibre GL 6.14 (BSD-3), uPlot 1.6.32 (MIT) copied from adsbee-aero, Source Sans 3 (OFL,
 @fontsource-variable/source-sans-3 5.2.8). Coverage colors: tar1090's altitude colors at each band's middle (`--band-*` in site.css), as on the globe and adsbee.aero's range maps.
+3D coverage slabs run from each band's true bottom to top altitude, heights times one page factor (shown as `↕ ×N` under
+the 3D button), picked as adsbee.aero's swarm range map does (`static/feeders/js/coverage_shapes.js`): the band below
+which 90 % of heard cells lie reaches about 60 % of the reference range (the feeder's farthest on its page, the 90th
+percentile of the feeders' farthest on /coverage/), rounded down to 1, 2, 3, 5, 10, 15, 20, 30, 50 or 100.

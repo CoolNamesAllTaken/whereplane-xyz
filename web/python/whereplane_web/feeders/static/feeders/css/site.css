@@ -240,8 +240,9 @@ table.list td.name .id { display: block; font-family: var(--mono); font-size: .7
 .map-panel .bands-strip i { width: .5em; height: .85em; border-radius: 1px; display: inline-block; }
 .map-panel .bands-strip i.no { background: var(--line) !important; }
 .map-empty { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; color: var(--muted); pointer-events: none; }
-.map-note { position: absolute; z-index: 2; left: .6em; top: .6em; font-size: .78em; background: var(--surface); border: 1px solid var(--line);
-	border-radius: var(--pfb-radius-sm); padding: 0 .45em; color: var(--muted); }
+.maplibregl-ctrl.map-factor { font: 600 12px/1 var(--pfb-font); background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+	border-radius: var(--pfb-radius-sm); padding: .3em .45em; white-space: nowrap; cursor: default; }
+.maplibregl-ctrl.map-factor[hidden] { display: none; }
 .preview-link { position: absolute; inset: 0; z-index: 2; }
 .maplibregl-ctrl-group button.on { background-color: #DDEFE4; }
 [data-bs-theme="dark"] .map-box { background: #181818; }
