@@ -42,3 +42,47 @@ export function slabs(data, fallbackRangeM) {
     const heights = data.bands.map((_b, i) => bandFt(data.bands, i).map(ft => ft * FT_M * factor));
     return {factor, heights};
 }
+
+/** A cell's ring [[w, s], [e, s], [e, n], [w, n], [w, s]] (lng, lat) on the API's grid (index = floor((deg + 90 or 180) / step)). */
+export function cellRing(la, lo, step) {
+    const s = la * step - 90, w = lo * step - 180, n = s + step, e = w + step;
+    return [[w, s], [e, s], [e, n], [w, n], [w, s]];
+}
+
+/**
+ * Slab pieces for cells [[la, lo, band, ...], ...]: per cell a lid (`{cell, ring, lid: true}`, drawn with no
+ * thickness) and a thin wall strip on each side where the band's coverage ends (`{cell, ring, lid: false}`).
+ * Walls between neighboring cells of the same band are left out, so a camera inside a band (near the ground)
+ * sees out to where the band ends rather than the walls of the cell it stands in. `cell` = index into cells.
+ */
+export function slabPieces(cells, step) {
+    const has = new Set(cells.map(([la, lo, band]) => `${la},${lo},${band}`));
+    const t = step / 200;                                  // wall strip width: 50-100 m on the 0.1-0.2° grids
+    const out = [];
+    cells.forEach(([la, lo, band], cell) => {
+        const ring = cellRing(la, lo, step);
+        const [[w, s], , [e, n]] = ring;
+        out.push({cell, ring, lid: true});
+        const strip = (x0, y0, x1, y1) => out.push({cell, lid: false, ring: [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]});
+        if (!has.has(`${la - 1},${lo},${band}`)) { strip(w, s, e, s + t); }
+        if (!has.has(`${la + 1},${lo},${band}`)) { strip(w, n - t, e, n); }
+        if (!has.has(`${la},${lo - 1},${band}`)) { strip(w, s, w + t, n); }
+        if (!has.has(`${la},${lo + 1},${band}`)) { strip(e - t, s, e, n); }
+    });
+    return out;
+}
+
+/**
+ * Where the camera is, from the map's public view: {lng, lat, altM}. MapLibre's camera sits
+ * height / 2 / tan(fov / 2) px from the center, tilted back by the pitch along the bearing.
+ */
+export function cameraSpot({lng, lat, zoom, pitch, bearing, heightPx, fovDeg}) {
+    const rad = Math.PI / 180, world = 512 * 2 ** zoom;                    // world size in px (Web Mercator)
+    const distPx = heightPx / 2 / Math.tan(fovDeg * rad / 2);
+    const back = Math.sin(pitch * rad) * distPx;
+    const x = (lng + 180) / 360 * world - back * Math.sin(bearing * rad);
+    const y = (0.5 - Math.log(Math.tan(Math.PI / 4 + lat * rad / 2)) / (2 * Math.PI)) * world + back * Math.cos(bearing * rad);
+    const mpp = 40075016.686 * Math.cos(lat * rad) / world;                // meters per px at the center
+    return {lng: x / world * 360 - 180, lat: (2 * Math.atan(Math.exp((0.5 - y / world) * 2 * Math.PI)) - Math.PI / 2) / rad,
+            altM: Math.cos(pitch * rad) * distPx * mpp};
+}

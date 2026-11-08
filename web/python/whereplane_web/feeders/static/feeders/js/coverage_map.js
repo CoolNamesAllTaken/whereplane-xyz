@@ -5,14 +5,14 @@
  *
  * 3D: each band is a slab from its true bottom to its true top altitude, heights times one factor for the
  * page (coverage_shapes.js, as adsbee.aero's swarm range map; the chip under the 3D button shows it),
- * distances to scale; tilt and turn with right-drag or two fingers. 2D: each cell colored by
+ * distances to scale; tilt (down to eye level) and turn with right-drag or two fingers. 2D: each cell colored by
  * the lowest shown band heard there. Band colors: tar1090's altitude colors (colors.js, --band-* in site.css).
  * Hover: band and feeder count. Click: the feeders that heard that cell (/api/cell.json).
  * Data: /api/coverage.json, refreshed every 2 minutes.
  */
 import * as maplibregl from 'maplibre-gl';
 import {bandColor} from 'wp/colors';
-import {slabs} from 'wp/coverage_shapes';
+import {cameraSpot, cellRing as gridRing, slabPieces, slabs} from 'wp/coverage_shapes';
 
 const root = document.getElementById('coverage');
 const mode = root.dataset.mode;                      // full | preview | feeder
@@ -30,6 +30,9 @@ let data = null, bands = [], colors = [], heights = [], factor = 1;
 let shown = new Set();            // visible band indexes
 let tilted = mode !== 'preview';
 const PITCH = root.clientWidth < 600 ? 50 : 55;
+// Tilt down to eye level. MapLibre caps its camera math at 89.25°, and past 90° the camera would be under the
+// ground (no terrain), so stop just short.
+const MAX_PITCH = 88;
 
 // The basemap's colors: faint and neutral, so the altitude colors carry the map. Light: near-white land, pale water.
 // Dark: charcoal land, water and lines a little lighter.
@@ -55,9 +58,11 @@ function baseLayers() {
                  'line-dasharray': [3, 2]}},
     ];
 }
+// Seen from low down, a sky a shade off the land so the horizon reads, fading into the land's color at the horizon.
 function skyOf() {
     const bg = basePaint().bg;
-    return {'sky-color': bg, 'horizon-color': bg, 'fog-color': bg, 'sky-horizon-blend': 0.5, 'horizon-fog-blend': 0.5, 'fog-ground-blend': 1};
+    return {'sky-color': dark() ? '#262E33' : '#E4ECF0', 'horizon-color': bg, 'fog-color': bg,
+            'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.5, 'fog-ground-blend': 1};
 }
 
 const map = new maplibregl.Map({
@@ -74,19 +79,30 @@ const map = new maplibregl.Map({
         layers: baseLayers(),
         sky: skyOf(),
     },
-    center: [-98, 39], zoom: 3, maxPitch: 75,
+    center: [-98, 39], zoom: 3, maxPitch: MAX_PITCH,
     pitch: tilted ? PITCH : 0,
     interactive: mode !== 'preview',
     attributionControl: {compact: true},
     preserveDrawingBuffer: true,
 });
 
+// Near the ground MapLibre (6.14) puts the far clip plane where the ground meets the horizon and the near one at
+// height / 50 px: slabs that rise beyond the horizon get cut off, and those the camera passes close to clip.
+// Push both out. Internal API: recheck when MapLibre is updated.
+(function widenDepthRange() {
+    const proto = Object.getPrototypeOf(map._camera?.transform ?? {});
+    const calc = proto._calculateNearFarZ;
+    if (typeof calc !== 'function' || calc.widened) { return; }
+    proto._calculateNearFarZ = function (...args) {
+        calc.apply(this, args);
+        this._helper._farZ *= 4;
+        this._helper._nearZ /= 4;
+    };
+    proto._calculateNearFarZ.widened = true;
+})();
+
 // ─── Shapes ─────────────────────────────────────────────────────────────────
-function cellRing(la, lo) {
-    const step = data.cell_deg;
-    const s = la * step - 90, w = lo * step - 180, n = s + step, e = w + step;
-    return [[w, s], [e, s], [e, n], [w, n], [w, s]];
-}
+const cellRing = (la, lo) => gridRing(la, lo, data.cell_deg);
 // No feeder range known yet (no feeder located): half the coverage's narrower side instead.
 function extentRangeM() {
     if (!data.cells.length) { return 0; }
@@ -97,13 +113,18 @@ function extentRangeM() {
 function buildFeatures() {
     ({factor, heights} = slabs(data, extentRangeM()));
     showFactor();
-    const features = data.cells.map(([la, lo, band, n, hits], i) => {
+    // Lids and outer walls only (coverage_shapes.slabPieces); a cell's pieces share its id, so hover lights them all.
+    const features = slabPieces(data.cells, data.cell_deg).map(({cell, ring, lid}) => {
+        const [la, lo, band, n, hits] = data.cells[cell];
         const [base, top] = heights[band];
-        return {type: 'Feature', id: i, geometry: {type: 'Polygon', coordinates: [cellRing(la, lo)]},
-                properties: {la, lo, band, n, hits, base, top, color: colors[band]}};
+        return {type: 'Feature', id: cell, geometry: {type: 'Polygon', coordinates: [ring]},
+                properties: {la, lo, band, n, hits, base: lid ? top : base, top, color: colors[band]}};
     });
+    cellBands = new Map();
+    data.cells.forEach(([la, lo, band]) => { const k = `${la},${lo}`; cellBands.set(k, [...(cellBands.get(k) || []), band]); });
     map.getSource('cells').setData({type: 'FeatureCollection', features});
     buildFlat();
+    fadeAroundCamera(true);
 }
 
 // 2D: one square per cell, the lowest shown band heard there.
@@ -132,7 +153,7 @@ function addLayers() {
                 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'top'],
                 // Low bands solid, high ones faint (as adsbee.aero's range map): the wide high slabs sit over the low ones.
                 // No vertical gradient: shaded walls between neighboring cells read as stripes.
-                'fill-extrusion-opacity': 0.9 - 0.6 * i / Math.max(bands.length - 1, 1), 'fill-extrusion-vertical-gradient': false,
+                'fill-extrusion-opacity': opacityOf(i), 'fill-extrusion-vertical-gradient': false,
             },
         });
     });
@@ -144,6 +165,22 @@ function addLayers() {
                 'fill-outline-color': 'rgba(0,0,0,0)'},
     });
 }
+
+// The band the camera is inside (tilted down near the ground, over coverage) turns faint, so it doesn't fill the view.
+const opacityOf = (i, inside) => (0.9 - 0.6 * i / Math.max(bands.length - 1, 1)) * (inside ? 0.3 : 1);
+let cellBands = new Map(), insideBand = null;
+function fadeAroundCamera(force) {
+    if (!data || !tilted) { return; }
+    const c = map.getCenter();
+    const cam = cameraSpot({lng: c.lng, lat: c.lat, zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing(),
+                            heightPx: map.getCanvas().clientHeight, fovDeg: map.getVerticalFieldOfView()});
+    const k = `${Math.floor((cam.lat + 90) / data.cell_deg)},${Math.floor((cam.lng + 180) / data.cell_deg)}`;
+    const now = (cellBands.get(k) || []).find(b => cam.altM >= heights[b][0] && cam.altM <= heights[b][1]) ?? null;
+    if (now === insideBand && !force) { return; }
+    [insideBand, now].forEach(b => { if (b !== null) { map.setPaintProperty(`band-${b}`, 'fill-extrusion-opacity', opacityOf(b, b === now)); } });
+    insideBand = now;
+}
+map.on('move', () => fadeAroundCamera(false));
 const queryLayers = () => (tilted ? bands.map((_b, i) => `band-${i}`).filter(id => shown.has(Number(id.slice(5)))) : ['flat']);
 
 function applyVisibility() {
