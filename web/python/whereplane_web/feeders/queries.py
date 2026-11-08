@@ -90,9 +90,10 @@ def coverage(window: str, feeder: Feeder | None = None, res: int = 1) -> dict:
             .values_list('la', 'lo', 'band', 'n', 'h'))
     out = {
         'window': window, 'res': res, 'cell_deg': round(readsb.CELL_DEG * res, 4),
-        'bands': [{'key': k, 'label': lab, 'tip': tip, 'mid_ft': mid}
-                  for (k, lab, _, _), tip, mid in zip(readsb.BANDS, readsb.BAND_TIPS, readsb.BAND_MID_FT)],
+        'bands': [{'key': k, 'label': lab, 'tip': tip, 'mid_ft': mid, 'low_ft': low, 'high_ft': high}
+                  for (k, lab, low, high), tip, mid in zip(readsb.BANDS, readsb.BAND_TIPS, readsb.BAND_MID_FT)],
         'cells': [list(r) for r in rows],
+        'ref_range_m': ref_range_m(feeder),
     }
     cache.set(key, out, 60)
     return out
@@ -132,6 +133,21 @@ def max_ranges() -> dict[int, int]:
         hit = {f.pk: feeder_max_range(f) for f in public_feeders()}
         cache.set('maxranges', hit, 600)
     return hit
+
+
+def ref_range_m(feeder: Feeder | None = None) -> int | None:
+    """
+    The distance the coverage map's slab heights are scaled to (coverage_shapes.js), as adsbee.aero
+    scales to its widest bee: one feeder's farthest range (7 d), or on the full map the farthest of
+    the public feeders' after dropping the top 10 % (one odd range shouldn't flatten everything).
+    None if unknown.
+    """
+    if feeder is not None:
+        km = max_ranges().get(feeder.pk) or feeder_max_range(feeder)
+    else:
+        kms = sorted(v for v in max_ranges().values() if v)
+        km = kms[int(0.9 * (len(kms) - 1))] if kms else None
+    return round(km * 1000) if km else None
 
 
 def feeder_series(f: Feeder, window: str) -> dict:
