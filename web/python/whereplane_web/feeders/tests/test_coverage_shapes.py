@@ -63,3 +63,32 @@ def test_coverage_api_sends_band_edges_and_reference_range(monkeypatch):
     assert d['ref_range_m'] == 240000                        # 90th percentile: the 900 km outlier is ignored
     monkeypatch.setattr(queries, 'max_ranges', lambda: {})
     assert queries.ref_range_m() is None
+
+
+@needs_node
+def test_slab_walls_only_where_a_band_ends():
+    # Two neighboring <1k cells and one 1-3k cell over the second: the shared side gets no wall.
+    cells = [[0, 0, 1, 1, 1], [0, 1, 1, 1, 1], [0, 1, 2, 1, 1]]
+    out = node("import {slabPieces} from './coverage_shapes.js';"
+               f"console.log(JSON.stringify(slabPieces({json.dumps(cells)}, 0.2)));")
+    lids = [p['cell'] for p in out if p['lid']]
+    walls = {}
+    for p in out:
+        if not p['lid']:
+            walls[p['cell']] = walls.get(p['cell'], 0) + 1
+    assert lids == [0, 1, 2]
+    assert walls == {0: 3, 1: 3, 2: 4}
+    east_of_0 = [p for p in out if p['cell'] == 0 and not p['lid'] and p['ring'][0][0] == pytest.approx(-180 + 0.2 - 0.001)]
+    assert not east_of_0                                    # no wall on cell 0's east side, shared with cell 1
+
+
+@needs_node
+def test_camera_spot_matches_maplibre():
+    # Values from MapLibre 6.14's own transform (getCameraLngLat / getCameraAltitude) at a 637 px tall map.
+    view = {'lng': -122.1, 'lat': 37.45, 'zoom': 13, 'pitch': 88, 'bearing': -30, 'heightPx': 637, 'fovDeg': 36.8699}
+    out = node("import {cameraSpot} from './coverage_shapes.js';"
+               f"console.log(JSON.stringify([cameraSpot({json.dumps(view)}), cameraSpot({json.dumps(view | {'pitch': 0})})]));")
+    low, top_down = out
+    assert low['lng'] == pytest.approx(-122.059019, abs=1e-5) and low['lat'] == pytest.approx(37.393628, abs=1e-5)
+    assert low['altM'] == pytest.approx(252.66, rel=0.005)
+    assert top_down['lng'] == pytest.approx(-122.1) and top_down['lat'] == pytest.approx(37.45)
